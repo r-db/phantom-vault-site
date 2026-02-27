@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Manual — Phantom Vault</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --text: #cdd6f4;
+      --text-dim: #6c7086;
+      --accent: #e94560;
+      --green: #a6e3a1;
+      --blue: #89b4fa;
+      --yellow: #f9e2af;
+      --code-bg: #181825;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(10, 10, 15, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .nav a { color: var(--text-dim); text-decoration: none; font-size: 0.9rem; }
+    .nav a:hover { color: var(--accent); }
+    .nav .brand { color: var(--text); font-weight: 600; }
+    .nav .brand span { color: var(--accent); }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 100px 24px 80px;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    h1 span { color: var(--accent); }
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      margin-bottom: 48px;
+      font-style: italic;
+    }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #fff;
+      margin: 48px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--blue);
+      margin: 32px 0 12px;
+    }
+    p { margin-bottom: 16px; }
+    strong { color: #fff; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 32px;
+      margin-bottom: 48px;
+    }
+    .toc h3 { margin: 0 0 16px; color: var(--text-dim); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    .toc ul { list-style: none; columns: 2; column-gap: 32px; }
+    .toc li { margin-bottom: 8px; }
+    .toc a { color: var(--text); font-size: 0.95rem; }
+    .toc a:hover { color: var(--accent); }
+    @media (max-width: 600px) { .toc ul { columns: 1; } }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 16px 0 24px;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.9em;
+    }
+    p code, li code {
+      background: var(--code-bg);
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: var(--green);
+    }
+    pre .prompt { color: var(--text-dim); }
+    pre .cmd { color: var(--green); }
+    pre .output { color: var(--text); }
+    pre .success { color: var(--green); }
+    pre .warn { color: var(--yellow); }
+    pre .comment { color: var(--text-dim); font-style: italic; }
+    .callout {
+      background: var(--surface);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      margin: 24px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .callout.info { border-left-color: var(--blue); }
+    .callout.warn { border-left-color: var(--yellow); }
+    .callout p { margin: 0; }
+    .callout strong { color: var(--accent); }
+    .callout.info strong { color: var(--blue); }
+    ul, ol { margin: 16px 0; padding-left: 24px; }
+    li { margin-bottom: 8px; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+    .footer {
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+      margin-top: 64px;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="brand">Phantom <span>Vault</span></a>
+    <div>
+      <a href="/architecture.html" style="margin-right: 24px;">Architecture</a>
+      <a href="/">Home</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1>User <span>Manual</span></h1>
+    <p class="subtitle">Secrets exist but are never observable.</p>
+
+    <div class="toc">
+      <h3>Contents</h3>
+      <ul>
+        <li><a href="#installation">1. Installation</a></li>
+        <li><a href="#first-5-minutes">2. Your First 5 Minutes</a></li>
+        <li><a href="#adding-secrets">3. Adding Secrets</a></li>
+        <li><a href="#viewing-secrets">4. Viewing Your Secrets</a></li>
+        <li><a href="#ai-agents">5. Using with AI Agents</a></li>
+        <li><a href="#running-commands">6. Running Commands</a></li>
+        <li><a href="#namespaces">7. Namespaces</a></li>
+        <li><a href="#health">8. Health & Rotation</a></li>
+        <li><a href="#audit">9. Audit Log</a></li>
+        <li><a href="#canary">10. Canary Secrets</a></li>
+        <li><a href="#cheatsheet">11. Cheat Sheet</a></li>
+      </ul>
+    </div>
+
+    <h2 id="installation">1. Installation</h2>
+
+    <h3>Open Your Terminal</h3>
+    <p><strong>On Mac:</strong> Press <code>Cmd + Space</code>, type "Terminal", press Enter.<br>
+    <strong>On Linux:</strong> Press <code>Ctrl + Alt + T</code></p>
+
+    <h3>Install (One Command)</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">curl -fsSL https://phantomvault.riscent.com/install | sh</span>
+
+<span class="output">  Detecting system...
+  <span class="success">✓</span> macOS 15.3 (Apple Silicon M4)
+
+  Downloading phantom-vault v1.0.0...
+  <span class="success">✓</span> Downloaded (4.2 MB)
+
+  Installing to /usr/local/bin/phantom...
+  <span class="success">✓</span> Installed
+
+  <span class="success">🔐 Phantom Vault is ready.</span>
+  Run 'phantom init' to create your vault.</span></pre>
+
+    <h3>Verify It Worked</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom --version</span>
+<span class="output">phantom-vault 1.0.0</span></pre>
+
+    <hr>
+
+    <h2 id="first-5-minutes">2. Your First 5 Minutes</h2>
+
+    <h3>Step 1: Create Your Vault</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom init</span>
+
+<span class="output">  🔐 Phantom Vault — Initialization
+
+  Detecting hardware security...
+  <span class="success">✓</span> Apple Secure Enclave detected (M4)
+  <span class="success">✓</span> Touch ID available
+
+  Creating vault at ~/.phantom/vault.db
+  <span class="success">✓</span> Vault created with hardware-backed encryption
+  <span class="success">✓</span> Master key stored in Secure Enclave
+
+  Your vault is ready. No password exists anywhere.
+  Unlock with Touch ID.</span></pre>
+
+    <div class="callout info">
+      <p><strong>What just happened?</strong> Phantom created an encrypted database. On Apple Silicon, the encryption key lives inside the Secure Enclave chip — it physically cannot be extracted.</p>
+    </div>
+
+    <h3>Step 2: Add Your First Secret</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom add OPENAI_API_KEY</span>
+<span class="output">Enter value for OPENAI_API_KEY: </span><span class="comment">••••••••••••••••••••••••••••••••</span>
+<span class="output"><span class="success">✓</span> Added OPENAI_API_KEY</span></pre>
+
+    <h3>Step 3: Connect to Claude Code</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom mcp install</span>
+
+<span class="output">  Installing MCP server for Claude Code...
+  <span class="success">✓</span> Config written to ~/Library/Application Support/Claude/claude_desktop_config.json
+
+  <span class="success">Done.</span> Restart Claude Code, then ask:
+  "What secrets do I have in my vault?"</span></pre>
+
+    <hr>
+
+    <h2 id="adding-secrets">3. Adding Secrets</h2>
+
+    <h3>Interactive (Secure — Value Hidden)</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom add STRIPE_SECRET_KEY</span>
+<span class="output">Enter value: </span><span class="comment">••••••••••••••••••••••••</span>
+<span class="output"><span class="success">✓</span> Added STRIPE_SECRET_KEY</span></pre>
+
+    <h3>From Environment</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">export TEMP_KEY="sk_live_abc123"</span>
+<span class="prompt">~ %</span> <span class="cmd">phantom add STRIPE_KEY --from-env TEMP_KEY</span>
+<span class="output"><span class="success">✓</span> Added STRIPE_KEY</span>
+<span class="prompt">~ %</span> <span class="cmd">unset TEMP_KEY</span></pre>
+
+    <h3>With Expiration</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom add TEMP_TOKEN --expires 7d</span>
+<span class="output">Enter value: </span><span class="comment">••••••••••••</span>
+<span class="output"><span class="success">✓</span> Added TEMP_TOKEN (expires in 7 days)</span></pre>
+
+    <hr>
+
+    <h2 id="viewing-secrets">4. Viewing Your Secrets</h2>
+
+    <h3>List All Secrets (Names Only)</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom list</span>
+<span class="output">
+  Namespace: default
+
+  NAME                 CREATED      EXPIRES     ACCESS
+  OPENAI_API_KEY       2 days ago   never       12 times
+  STRIPE_SECRET_KEY    1 day ago    never       3 times
+  DATABASE_URL         5 hours ago  never       8 times
+</span></pre>
+
+    <div class="callout warn">
+      <p><strong>Notice:</strong> Values are never shown. Even <code>phantom list</code> only shows names.</p>
+    </div>
+
+    <h3>See Last 4 Characters (Verification)</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom show STRIPE_SECRET_KEY --masked</span>
+<span class="output">STRIPE_SECRET_KEY: ••••••••••••xyz9</span></pre>
+
+    <hr>
+
+    <h2 id="ai-agents">5. Using with AI Agents</h2>
+
+    <h3>Connect to Claude Code</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom mcp install</span></pre>
+
+    <p>After restarting Claude Code, your AI gets these tools:</p>
+    <ul>
+      <li><code>vault_list</code> — See secret names (never values)</li>
+      <li><code>vault_exists</code> — Check if a secret exists</li>
+      <li><code>vault_masked</code> — See last 4 characters</li>
+      <li><code>vault_run</code> — Run commands with secrets injected</li>
+      <li><code>vault_health</code> — Check expiring secrets</li>
+      <li><code>vault_rotate</code> — Request rotation (requires your approval)</li>
+    </ul>
+
+    <h3>Example: Ask Claude to Deploy</h3>
+    <pre><span class="comment"># You say:</span>
+<span class="output">"Deploy my app to Railway using my RAILWAY_TOKEN"</span>
+
+<span class="comment"># Claude runs:</span>
+<span class="cmd">vault_run(keys: ["RAILWAY_TOKEN"], command: "railway up")</span>
+
+<span class="comment"># Output is sanitized — if the token leaked, you'd see:</span>
+<span class="output">Deploying with token [REDACTED:RAILWAY_TOKEN]...</span></pre>
+
+    <hr>
+
+    <h2 id="running-commands">6. Running Commands</h2>
+
+    <h3>Inject Secrets as Environment Variables</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom run -s OPENAI_API_KEY -- python my_script.py</span>
+<span class="output"><span class="success">✓</span> Running with 1 secret injected
+<span class="comment">(your script runs with OPENAI_API_KEY in its environment)</span></span></pre>
+
+    <h3>Multiple Secrets</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom run -s DATABASE_URL -s REDIS_URL -- node server.js</span></pre>
+
+    <div class="callout">
+      <p><strong>Security:</strong> The secrets only exist in that subprocess. When it exits, they're gone. Output is scanned for leaked secrets and redacted automatically.</p>
+    </div>
+
+    <hr>
+
+    <h2 id="namespaces">7. Namespaces</h2>
+
+    <p>Keep work and personal secrets separate:</p>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom namespace create work</span>
+<span class="prompt">~ %</span> <span class="cmd">phantom namespace use work</span>
+<span class="prompt">~ %</span> <span class="cmd">phantom add COMPANY_API_KEY</span>
+
+<span class="prompt">~ %</span> <span class="cmd">phantom namespace use default</span>  <span class="comment"># switch back</span></pre>
+
+    <hr>
+
+    <h2 id="health">8. Health & Rotation</h2>
+
+    <h3>Check Vault Health</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom health</span>
+<span class="output">
+  Vault Status: <span class="success">Healthy</span>
+
+  Secrets: 5 total
+  Expiring soon: 1
+    - TEMP_TOKEN (expires in 2 days)
+
+  Last audit entry: 3 minutes ago
+  Canary status: OK
+</span></pre>
+
+    <h3>Rotate a Secret</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom rotate STRIPE_SECRET_KEY</span>
+<span class="output">Enter new value: </span><span class="comment">••••••••••••••••••••••••</span>
+<span class="output"><span class="success">✓</span> Rotated STRIPE_SECRET_KEY (v1 → v2)
+<span class="success">✓</span> Old value securely erased</span></pre>
+
+    <hr>
+
+    <h2 id="audit">9. Audit Log</h2>
+
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom audit --last 10</span>
+<span class="output">
+  TIME                  EVENT           SECRET              TOOL
+  2026-02-27 14:23:01   accessed        OPENAI_API_KEY      vault_run
+  2026-02-27 14:20:15   accessed        DATABASE_URL        vault_run
+  2026-02-27 13:05:44   added           STRIPE_SECRET_KEY   cli
+  2026-02-27 12:00:00   vault_opened    -                   cli
+</span></pre>
+
+    <p>Every access is logged with HMAC chaining — tampering is detectable.</p>
+
+    <hr>
+
+    <h2 id="canary">10. Canary Secrets</h2>
+
+    <p>Honeypot secrets that alert you if something tries to use them:</p>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom canary create BACKUP_AWS_KEY --pattern aws-access-key</span>
+<span class="output"><span class="success">✓</span> Created canary BACKUP_AWS_KEY
+  Looks like: AKIA••••••••••••XXXX
+  <span class="warn">⚠</span> Alert will trigger if this is ever accessed</span></pre>
+
+    <hr>
+
+    <h2 id="cheatsheet">11. Cheat Sheet</h2>
+
+    <pre><span class="comment"># Setup</span>
+<span class="cmd">phantom init</span>                    <span class="comment"># Create vault</span>
+<span class="cmd">phantom mcp install</span>             <span class="comment"># Connect to Claude</span>
+
+<span class="comment"># Secrets</span>
+<span class="cmd">phantom add SECRET_NAME</span>         <span class="comment"># Add secret (interactive)</span>
+<span class="cmd">phantom list</span>                    <span class="comment"># List all secrets</span>
+<span class="cmd">phantom show NAME --masked</span>      <span class="comment"># Show last 4 chars</span>
+<span class="cmd">phantom remove NAME</span>             <span class="comment"># Delete secret</span>
+<span class="cmd">phantom rotate NAME</span>             <span class="comment"># Rotate secret</span>
+
+<span class="comment"># Running commands</span>
+<span class="cmd">phantom run -s KEY -- cmd</span>       <span class="comment"># Inject secret into command</span>
+
+<span class="comment"># Namespaces</span>
+<span class="cmd">phantom namespace list</span>          <span class="comment"># List namespaces</span>
+<span class="cmd">phantom namespace use NAME</span>      <span class="comment"># Switch namespace</span>
+
+<span class="comment"># Maintenance</span>
+<span class="cmd">phantom health</span>                  <span class="comment"># Check vault health</span>
+<span class="cmd">phantom audit</span>                   <span class="comment"># View audit log</span></pre>
+
+    <div class="footer">
+      <a href="/">← Back to Home</a>
+    </div>
+  </div>
+</body>
+</html>
