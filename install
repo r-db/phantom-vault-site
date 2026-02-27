@@ -1,0 +1,171 @@
+#!/bin/sh
+# Phantom Vault Installer
+# Usage: curl -fsSL https://phantomvault.riscent.com/install | sh
+#
+# This script detects your OS and architecture, downloads the correct
+# phantom-vault binary, and installs it to /usr/local/bin.
+
+set -e
+
+# ─── Config ───────────────────────────────────────────────────
+REPO="phantomvault/phantom-vault"
+INSTALL_DIR="/usr/local/bin"
+BINARY_NAME="phantom"
+
+# ─── Colors (disable if not a terminal) ──────────────────────
+if [ -t 1 ]; then
+  GREEN='\033[0;32m'
+  RED='\033[0;31m'
+  YELLOW='\033[0;33m'
+  CYAN='\033[0;36m'
+  BOLD='\033[1m'
+  DIM='\033[2m'
+  NC='\033[0m'
+else
+  GREEN='' RED='' YELLOW='' CYAN='' BOLD='' DIM='' NC=''
+fi
+
+# ─── Helpers ──────────────────────────────────────────────────
+info()    { printf "${CYAN}  ✓${NC} %s\n" "$1"; }
+warn()    { printf "${YELLOW}  ⚠${NC} %s\n" "$1"; }
+error()   { printf "${RED}  ✗${NC} %s\n" "$1"; exit 1; }
+step()    { printf "\n${BOLD}  %s${NC}\n" "$1"; }
+
+# ─── Banner ───────────────────────────────────────────────────
+printf "\n"
+printf "${BOLD}  ⬇  Phantom Vault Installer${NC}\n"
+printf "${DIM}  Secrets exist but are never observable.${NC}\n"
+
+# ─── Detect OS ────────────────────────────────────────────────
+step "Detecting system..."
+
+OS="$(uname -s)"
+ARCH="$(uname -m)"
+
+case "$OS" in
+  Darwin) OS_NAME="macOS"; OS_TARGET="apple-darwin" ;;
+  Linux)  OS_NAME="Linux"; OS_TARGET="unknown-linux-gnu" ;;
+  *)      error "Unsupported operating system: $OS. Phantom Vault supports macOS and Linux." ;;
+esac
+
+case "$ARCH" in
+  x86_64|amd64)   ARCH_TARGET="x86_64" ;;
+  arm64|aarch64)   ARCH_TARGET="aarch64" ;;
+  *)               error "Unsupported architecture: $ARCH. Phantom Vault supports x86_64 and arm64." ;;
+esac
+
+# Friendly names for display
+case "$OS-$ARCH" in
+  Darwin-arm64)    FRIENDLY="macOS (Apple Silicon)" ;;
+  Darwin-x86_64)   FRIENDLY="macOS (Intel)" ;;
+  Linux-x86_64)    FRIENDLY="Linux (x86_64)" ;;
+  Linux-aarch64)   FRIENDLY="Linux (ARM64)" ;;
+  *)               FRIENDLY="$OS_NAME ($ARCH)" ;;
+esac
+
+# Detect OS version
+if [ "$OS" = "Darwin" ]; then
+  OS_VERSION="$(sw_vers -productVersion 2>/dev/null || echo 'unknown')"
+  info "$FRIENDLY — macOS $OS_VERSION"
+elif [ "$OS" = "Linux" ]; then
+  if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS_VERSION="${PRETTY_NAME:-Linux}"
+  else
+    OS_VERSION="Linux"
+  fi
+  info "$FRIENDLY — $OS_VERSION"
+fi
+
+# ─── Check dependencies ──────────────────────────────────────
+if ! command -v curl >/dev/null 2>&1; then
+  error "curl is required but not found. Install curl and try again."
+fi
+
+# ─── Get latest release version ───────────────────────────────
+step "Finding latest version..."
+
+LATEST_URL="https://api.github.com/repos/${REPO}/releases/latest"
+VERSION="$(curl -fsSL "$LATEST_URL" 2>/dev/null | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"//;s/".*//')"
+
+if [ -z "$VERSION" ]; then
+  warn "Could not detect latest version from GitHub."
+  warn "Using fallback: v1.0.0"
+  VERSION="v1.0.0"
+fi
+
+info "Latest version: $VERSION"
+
+# ─── Download ─────────────────────────────────────────────────
+step "Downloading phantom-vault ${VERSION} for ${ARCH_TARGET}-${OS_TARGET}..."
+
+FILENAME="phantom-${ARCH_TARGET}-${OS_TARGET}"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${FILENAME}"
+
+TMPDIR="$(mktemp -d)"
+TMPFILE="${TMPDIR}/${BINARY_NAME}"
+
+HTTP_CODE="$(curl -fsSL -w "%{http_code}" -o "$TMPFILE" "$DOWNLOAD_URL" 2>/dev/null || true)"
+
+if [ ! -f "$TMPFILE" ] || [ "$(wc -c < "$TMPFILE" | tr -d ' ')" -lt 1000 ]; then
+  rm -rf "$TMPDIR"
+  error "Download failed (HTTP $HTTP_CODE). Check https://github.com/${REPO}/releases for available builds."
+fi
+
+FILESIZE="$(wc -c < "$TMPFILE" | tr -d ' ')"
+FILESIZE_MB="$(echo "scale=1; $FILESIZE / 1048576" | bc 2>/dev/null || echo "?")"
+info "Downloaded (${FILESIZE_MB} MB)"
+
+chmod +x "$TMPFILE"
+
+# ─── Verify binary runs ──────────────────────────────────────
+if ! "$TMPFILE" --version >/dev/null 2>&1; then
+  rm -rf "$TMPDIR"
+  error "Downloaded binary failed to execute. Your system may not be supported."
+fi
+
+INSTALLED_VERSION="$("$TMPFILE" --version 2>/dev/null || echo 'unknown')"
+
+# ─── Install ──────────────────────────────────────────────────
+step "Installing to ${INSTALL_DIR}/${BINARY_NAME}..."
+
+if [ -w "$INSTALL_DIR" ]; then
+  mv "$TMPFILE" "${INSTALL_DIR}/${BINARY_NAME}"
+  info "Installed (no sudo needed)"
+else
+  if command -v sudo >/dev/null 2>&1; then
+    printf "${DIM}  (requires sudo — enter your password)${NC}\n"
+    sudo mv "$TMPFILE" "${INSTALL_DIR}/${BINARY_NAME}"
+    info "Installed"
+  else
+    rm -rf "$TMPDIR"
+    error "Cannot write to ${INSTALL_DIR} and sudo is not available. Try: mv $TMPFILE ${INSTALL_DIR}/${BINARY_NAME}"
+  fi
+fi
+
+rm -rf "$TMPDIR"
+
+# ─── Verify installation ─────────────────────────────────────
+step "Verifying..."
+
+if command -v phantom >/dev/null 2>&1; then
+  info "$INSTALLED_VERSION"
+else
+  warn "phantom was installed to ${INSTALL_DIR} but is not in your PATH."
+  warn "Add this to your shell profile:"
+  printf "\n    export PATH=\"\$PATH:${INSTALL_DIR}\"\n\n"
+fi
+
+# ─── Done ─────────────────────────────────────────────────────
+printf "\n"
+printf "${GREEN}${BOLD}  🔐 Phantom Vault is ready.${NC}\n"
+printf "\n"
+printf "  ${BOLD}Next steps:${NC}\n"
+printf "    phantom init           Create your vault\n"
+printf "    phantom add SECRET     Store your first API key\n"
+printf "    phantom mcp install    Connect to Claude Code\n"
+printf "    phantom --help         See all commands\n"
+printf "\n"
+printf "  ${DIM}Docs: https://phantomvault.riscent.com${NC}\n"
+printf "  ${DIM}Source: https://github.com/${REPO}${NC}\n"
+printf "\n"
