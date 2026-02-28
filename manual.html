@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Manual — Phantom Vault</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <style>
     :root {
       --bg: #0a0a0f;
@@ -169,7 +172,8 @@
         <li><a href="#health">8. Health & Rotation</a></li>
         <li><a href="#audit">9. Audit Log</a></li>
         <li><a href="#canary">10. Canary Secrets</a></li>
-        <li><a href="#cheatsheet">11. Cheat Sheet</a></li>
+        <li><a href="#biometric">11. Biometric Unlock</a></li>
+        <li><a href="#cheatsheet">12. Cheat Sheet</a></li>
       </ul>
     </div>
 
@@ -205,21 +209,33 @@
     <h3>Step 1: Create Your Vault</h3>
     <pre><span class="prompt">~ %</span> <span class="cmd">phantom init</span>
 
-<span class="output">  🔐 Phantom Vault — Initialization
+<span class="output">  Creating new vault at ~/.vault-secrets
 
-  Detecting hardware security...
-  <span class="success">✓</span> Apple Secure Enclave detected (M4)
-  <span class="success">✓</span> Touch ID available
+  Enter master password: </span><span class="comment">••••••••••••••••</span>
+<span class="output">  Confirm master password: </span><span class="comment">••••••••••••••••</span>
 
-  Creating vault at ~/.phantom/vault.db
-  <span class="success">✓</span> Vault created with hardware-backed encryption
-  <span class="success">✓</span> Master key stored in Secure Enclave
+<span class="output">  <span class="success">Vault created successfully!</span>
 
-  Your vault is ready. No password exists anywhere.
-  Unlock with Touch ID.</span></pre>
+  Next steps:
+    phantom add &lt;name&gt;     Add a secret
+    phantom mcp install    Enable Claude Code integration
+    phantom biometric enable   Enable Touch ID unlock</span></pre>
+
+    <h3>With Touch ID (macOS)</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom init --biometric</span>
+
+<span class="output">  Creating new vault at ~/.vault-secrets
+
+  Enter master password: </span><span class="comment">••••••••••••••••</span>
+<span class="output">  Confirm master password: </span><span class="comment">••••••••••••••••</span>
+
+<span class="output">  Enabling biometric unlock...
+  <span class="success">Touch ID enabled for vault unlock.</span>
+
+  <span class="success">Vault created successfully!</span></span></pre>
 
     <div class="callout info">
-      <p><strong>What just happened?</strong> Phantom created an encrypted database. On Apple Silicon, the encryption key lives inside the Secure Enclave chip — it physically cannot be extracted.</p>
+      <p><strong>What just happened?</strong> Phantom created an encrypted vault using AES-256-GCM with Argon2id key derivation. With <code>--biometric</code>, your password is stored in macOS Keychain protected by Touch ID.</p>
     </div>
 
     <h3>Step 2: Add Your First Secret</h3>
@@ -383,21 +399,62 @@
 
     <hr>
 
-    <h2 id="cheatsheet">11. Cheat Sheet</h2>
+    <h2 id="biometric">11. Biometric Unlock</h2>
+
+    <p>On macOS, you can unlock your vault with Touch ID instead of typing your password every time.</p>
+
+    <h3>Check Status</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom biometric status</span>
+<span class="output">
+  Biometric Authentication Status
+  ================================
+
+  <span class="success">[OK]</span> Touch ID is available
+  <span class="success">[OK]</span> Biometric unlock is enabled for this vault
+</span></pre>
+
+    <h3>Enable Touch ID</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom biometric enable</span>
+<span class="output">  Enter master password to enable biometric: </span><span class="comment">••••••••••••</span>
+<span class="output">
+  <span class="success">Biometric unlock enabled!</span>
+  You can now unlock with Touch ID.</span></pre>
+
+    <h3>Disable Touch ID</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom biometric disable</span>
+<span class="output">  Biometric unlock disabled.
+  You will need to use your password to unlock the vault.</span></pre>
+
+    <div class="callout info">
+      <p><strong>How it works:</strong> Your master password is stored in macOS Keychain, protected by Touch ID. When you authenticate with Touch ID, the password is retrieved from Keychain and used to unlock the vault. The password never leaves the secure enclave.</p>
+    </div>
+
+    <hr>
+
+    <h2 id="cheatsheet">12. Cheat Sheet</h2>
 
     <pre><span class="comment"># Setup</span>
 <span class="cmd">phantom init</span>                    <span class="comment"># Create vault</span>
+<span class="cmd">phantom init --biometric</span>        <span class="comment"># Create vault + enable Touch ID</span>
 <span class="cmd">phantom mcp install</span>             <span class="comment"># Connect to Claude</span>
 
 <span class="comment"># Secrets</span>
 <span class="cmd">phantom add SECRET_NAME</span>         <span class="comment"># Add secret (interactive)</span>
+<span class="cmd">phantom add KEY --from-env VAR</span>  <span class="comment"># Add from environment</span>
 <span class="cmd">phantom list</span>                    <span class="comment"># List all secrets</span>
 <span class="cmd">phantom show NAME --masked</span>      <span class="comment"># Show last 4 chars</span>
+<span class="cmd">phantom get NAME</span>                <span class="comment"># Get full value (TTY only)</span>
 <span class="cmd">phantom remove NAME</span>             <span class="comment"># Delete secret</span>
 <span class="cmd">phantom rotate NAME</span>             <span class="comment"># Rotate secret</span>
+<span class="cmd">phantom import .env</span>             <span class="comment"># Import from .env file</span>
 
 <span class="comment"># Running commands</span>
 <span class="cmd">phantom run -s KEY -- cmd</span>       <span class="comment"># Inject secret into command</span>
+
+<span class="comment"># Biometric (macOS)</span>
+<span class="cmd">phantom biometric status</span>        <span class="comment"># Check Touch ID status</span>
+<span class="cmd">phantom biometric enable</span>        <span class="comment"># Enable Touch ID</span>
+<span class="cmd">phantom biometric disable</span>       <span class="comment"># Disable Touch ID</span>
 
 <span class="comment"># Namespaces</span>
 <span class="cmd">phantom namespace list</span>          <span class="comment"># List namespaces</span>
