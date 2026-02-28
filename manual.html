@@ -173,7 +173,8 @@
         <li><a href="#audit">9. Audit Log</a></li>
         <li><a href="#canary">10. Canary Secrets</a></li>
         <li><a href="#biometric">11. Biometric Unlock</a></li>
-        <li><a href="#cheatsheet">12. Cheat Sheet</a></li>
+        <li><a href="#policies">12. Security Policies</a></li>
+        <li><a href="#cheatsheet">13. Cheat Sheet</a></li>
       </ul>
     </div>
 
@@ -431,7 +432,55 @@
 
     <hr>
 
-    <h2 id="cheatsheet">12. Cheat Sheet</h2>
+    <h2 id="policies">12. Security Policies</h2>
+
+    <p>Control which tools can access your secrets and set usage restrictions.</p>
+
+    <h3>View Current Policy</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom policy show</span>
+<span class="output">
+  Security Policy:
+  ================
+
+  require_confirmation = ["shell_exec"]
+
+  (Using default policy)
+</span></pre>
+
+    <h3>Create a Policy File</h3>
+    <pre><span class="comment"># my-policy.toml</span>
+<span class="output">allowed_tools = ["exec_sql", "http_request", "vault_run"]
+blocked_tools = ["shell_exec"]
+require_confirmation = ["write_file"]
+rate_limit = 100  # max 100 secret accesses per hour
+
+[time_restrictions]
+enabled = true
+start_hour = 9
+end_hour = 18
+timezone = "America/New_York"</span></pre>
+
+    <h3>Apply a Policy</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom policy set my-policy.toml</span>
+<span class="output">Security policy updated from 'my-policy.toml'
+
+New policy:
+allowed_tools = ["exec_sql", "http_request", "vault_run"]
+blocked_tools = ["shell_exec"]
+...</span></pre>
+
+    <h3>Reset to Defaults</h3>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom policy reset</span>
+<span class="output">Reset security policy to defaults? [y/N]: y
+Security policy reset to defaults.</span></pre>
+
+    <div class="callout info">
+      <p><strong>Policy Priority:</strong> <code>blocked_tools</code> takes precedence over <code>allowed_tools</code>. If a tool is in both lists, it will be blocked.</p>
+    </div>
+
+    <hr>
+
+    <h2 id="cheatsheet">13. Cheat Sheet</h2>
 
     <pre><span class="comment"># Setup</span>
 <span class="cmd">phantom init</span>                    <span class="comment"># Create vault</span>
@@ -458,11 +507,23 @@
 
 <span class="comment"># Namespaces</span>
 <span class="cmd">phantom namespace list</span>          <span class="comment"># List namespaces</span>
+<span class="cmd">phantom namespace create NAME</span>   <span class="comment"># Create namespace</span>
 <span class="cmd">phantom namespace use NAME</span>      <span class="comment"># Switch namespace</span>
+<span class="cmd">phantom namespace delete NAME</span>   <span class="comment"># Delete namespace</span>
+
+<span class="comment"># Canary secrets</span>
+<span class="cmd">phantom canary create NAME</span>      <span class="comment"># Create honeypot secret</span>
+<span class="cmd">phantom canary list</span>             <span class="comment"># List canaries</span>
+<span class="cmd">phantom canary delete NAME</span>      <span class="comment"># Delete canary</span>
+
+<span class="comment"># Security policies</span>
+<span class="cmd">phantom policy show</span>             <span class="comment"># View current policy</span>
+<span class="cmd">phantom policy set FILE</span>         <span class="comment"># Apply policy from file</span>
+<span class="cmd">phantom policy reset</span>            <span class="comment"># Reset to defaults</span>
 
 <span class="comment"># Maintenance</span>
 <span class="cmd">phantom health</span>                  <span class="comment"># Check vault health</span>
-<span class="cmd">phantom audit</span>                   <span class="comment"># View audit log</span></pre>
+<span class="cmd">phantom audit --last N</span>          <span class="comment"># View last N audit entries</span></pre>
 
     <div class="footer">
       <a href="/">← Back to Home</a>
