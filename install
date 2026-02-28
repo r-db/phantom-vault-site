@@ -8,7 +8,7 @@
 set -e
 
 # ─── Config ───────────────────────────────────────────────────
-REPO="phantomvault/phantom-vault"
+REPO="r-db/phantom-vault"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="phantom"
 
