@@ -99,10 +99,11 @@ info "Latest version: $VERSION"
 # ─── Download ─────────────────────────────────────────────────
 step "Downloading phantom-vault ${VERSION} for ${ARCH_TARGET}-${OS_TARGET}..."
 
+TMPDIR="$(mktemp -d)"
+
+# Download phantom CLI
 FILENAME="phantom-${ARCH_TARGET}-${OS_TARGET}"
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${FILENAME}"
-
-TMPDIR="$(mktemp -d)"
 TMPFILE="${TMPDIR}/${BINARY_NAME}"
 
 HTTP_CODE="$(curl -fsSL -w "%{http_code}" -o "$TMPFILE" "$DOWNLOAD_URL" 2>/dev/null || true)"
@@ -114,9 +115,27 @@ fi
 
 FILESIZE="$(wc -c < "$TMPFILE" | tr -d ' ')"
 FILESIZE_MB="$(echo "scale=1; $FILESIZE / 1048576" | bc 2>/dev/null || echo "?")"
-info "Downloaded (${FILESIZE_MB} MB)"
+info "phantom CLI downloaded (${FILESIZE_MB} MB)"
 
 chmod +x "$TMPFILE"
+
+# Download vault-mcp (MCP server for Claude Code)
+MCP_FILENAME="vault-mcp-${ARCH_TARGET}-${OS_TARGET}"
+MCP_DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${MCP_FILENAME}"
+MCP_TMPFILE="${TMPDIR}/vault-mcp"
+
+HTTP_CODE="$(curl -fsSL -w "%{http_code}" -o "$MCP_TMPFILE" "$MCP_DOWNLOAD_URL" 2>/dev/null || true)"
+
+if [ -f "$MCP_TMPFILE" ] && [ "$(wc -c < "$MCP_TMPFILE" | tr -d ' ')" -gt 1000 ]; then
+  chmod +x "$MCP_TMPFILE"
+  MCP_FILESIZE="$(wc -c < "$MCP_TMPFILE" | tr -d ' ')"
+  MCP_FILESIZE_MB="$(echo "scale=1; $MCP_FILESIZE / 1048576" | bc 2>/dev/null || echo "?")"
+  info "vault-mcp downloaded (${MCP_FILESIZE_MB} MB)"
+  INSTALL_MCP=1
+else
+  warn "vault-mcp not available for this platform (Claude Code integration)"
+  INSTALL_MCP=0
+fi
 
 # ─── Verify binary runs ──────────────────────────────────────
 if ! "$TMPFILE" --version >/dev/null 2>&1; then
@@ -127,15 +146,17 @@ fi
 INSTALLED_VERSION="$("$TMPFILE" --version 2>/dev/null || echo 'unknown')"
 
 # ─── Install ──────────────────────────────────────────────────
-step "Installing to ${INSTALL_DIR}/${BINARY_NAME}..."
+step "Installing to ${INSTALL_DIR}..."
 
 if [ -w "$INSTALL_DIR" ]; then
   mv "$TMPFILE" "${INSTALL_DIR}/${BINARY_NAME}"
+  [ "$INSTALL_MCP" = "1" ] && mv "$MCP_TMPFILE" "${INSTALL_DIR}/vault-mcp"
   info "Installed (no sudo needed)"
 else
   if command -v sudo >/dev/null 2>&1; then
     printf "${DIM}  (requires sudo — enter your password)${NC}\n"
     sudo mv "$TMPFILE" "${INSTALL_DIR}/${BINARY_NAME}"
+    [ "$INSTALL_MCP" = "1" ] && sudo mv "$MCP_TMPFILE" "${INSTALL_DIR}/vault-mcp"
     info "Installed"
   else
     rm -rf "$TMPDIR"
