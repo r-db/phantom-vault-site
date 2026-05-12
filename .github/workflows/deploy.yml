@@ -15,9 +15,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3.13.1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "3.78.0"
-          command: pages deploy . --project-name=phantom-vault-site --branch=main
+          command: pages deploy . --project-name=phantom-vault-site
