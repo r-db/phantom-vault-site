@@ -678,15 +678,15 @@
   <section id="hero">
     <div class="container">
       <h1>Phantom <span class="vault">Vault</span></h1>
-      <p class="tagline">Secrets exist but are never observable.</p>
+      <p class="tagline">Your AI uses your API keys. Make sure nobody else does.</p>
 
       <p class="pitch">
-        Your AI coding assistant can read your <strong>.env</strong> files. Every API key, every database password — visible, loggable, leakable. Phantom Vault makes it so your AI can <strong>use</strong> your secrets without ever <strong>seeing</strong> them.
+        A free, open-source credential vault built for developers who code with AI. Store keys once. Your AI agent uses them, but never sees them. <strong>Free forever. No tiers. No account. No telemetry.</strong>
       </p>
 
       <div class="install-box">
-        <div class="install-label">Install (Mac & Linux)</div>
-        <div class="install-cmd" id="cmd">curl -fsSL https://phantomvault.riscent.com/install | sh</div>
+        <div class="install-label">Install (macOS & Linux)</div>
+        <div class="install-cmd" id="cmd">curl -fsSL https://phantomvault.riscent.com/install | bash</div>
         <button class="copy-btn" onclick="copyCmd()">Copy</button>
       </div>
 
@@ -695,33 +695,33 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
           View on GitHub
         </a>
-        <a href="#how-it-works" class="btn btn-outline">Read the Docs →</a>
+        <a href="#how-it-works" class="btn btn-outline">5-Command Setup →</a>
       </div>
 
       <div class="features">
         <div class="feature">
+          <h3>📝 Edit Like a Notepad</h3>
+          <p><code>phantom edit</code> opens your vault in <code>$EDITOR</code> as <code>KEY=VALUE</code> text. Save — encrypted. No <code>add</code>/<code>remove</code> ceremony for adding 10 secrets at once.</p>
+        </div>
+        <div class="feature">
+          <h3>💸 Spending Guardrails</h3>
+          <p>Cap monthly USD spend per key per provider. Never wake up to an $82K bill from a leaked API key.</p>
+        </div>
+        <div class="feature">
           <h3>🔐 Hardware-Backed Encryption</h3>
-          <p>Master key lives in Apple Secure Enclave or TPM. No password file exists anywhere.</p>
+          <p>AES-256-GCM + Argon2id. Master key in macOS Keychain (Touch ID when present). The vault on disk is opaque without you.</p>
         </div>
         <div class="feature">
-          <h3>🛡️ Oracle Attack Prevention</h3>
-          <p>Commands are analyzed before execution. Character-by-character probing is blocked.</p>
-        </div>
-        <div class="feature">
-          <h3>🔍 Multi-Encoding Sanitization</h3>
-          <p>Output scanned for secrets in 15+ encodings. Base64, hex, URL-encoded — all caught.</p>
-        </div>
-        <div class="feature">
-          <h3>📦 Process Sandboxing</h3>
-          <p>Commands run in network-restricted subprocesses. Secrets die when the process dies.</p>
+          <h3>🔗 Claude Code + MCP Native</h3>
+          <p>One command wires Phantom into Claude Code. Your AI agent gets tools — none return plaintext secrets. Auto-unlock at boot.</p>
         </div>
         <div class="feature">
           <h3>🪤 Canary Detection</h3>
-          <p>Honeypot secrets detect exfiltration attempts. Get alerted the moment something probes.</p>
+          <p>Drop a honeypot fake credential in your code. If it's ever used, you get an instant alert. Catch the leak before it catches you.</p>
         </div>
         <div class="feature">
-          <h3>🔗 Claude Code + MCP</h3>
-          <p>One command to connect. Your AI agent gets 6 tools — none return plaintext secrets.</p>
+          <h3>🔍 Multi-Encoding Sanitization</h3>
+          <p>Output scanned for secrets in 15+ encodings before returning to your AI. Base64, hex, URL-encoded — all caught.</p>
         </div>
       </div>
     </div>
@@ -760,7 +760,11 @@
       </div>
 
       <p class="problem-text fade-in">
-        Every AI coding assistant — Claude Code, Cursor, Windsurf — reads your .env files directly. Your API keys sit in the conversation context, the logs, the memory. If the AI is compromised by prompt injection, your keys go with it. This isn't theoretical — CVE-2025-59536 proved it. Phantom Vault eliminates this entire category of risk.
+        Every AI coding assistant — Claude Code, Cursor, Aider, Windsurf — reads your <code>.env</code> files directly. Your API keys sit in conversation context, logs, memory. If the AI is compromised by prompt injection, or the conversation gets saved/synced/forked, your keys go with it.
+      </p>
+
+      <p class="problem-text fade-in" style="margin-top: 24px;">
+        This isn't theoretical. February 2026: a three-person startup in Mexico woke up to an <strong style="color: var(--accent);">$82,314 Gemini bill</strong> over 48 hours — a stolen key, no refund, near bankruptcy (<a href="https://www.theregister.com/2026/03/03/gemini_api_key_82314_dollar_charge/" style="color: var(--accent);">The Register</a>). April 2026: Lakera scanned 46,500 npm packages and found <strong style="color: var(--accent);">1 in 13</strong> with Claude Code's "allow always" leaked live credentials (<a href="https://bdtechtalks.com/2026/04/27/claude-code-api-token-leak/" style="color: var(--accent);">bdtechtalks</a>). Phantom Vault eliminates this entire category of risk — locally, free, open-source, audit the crypto yourself.
       </p>
     </div>
   </section>
@@ -768,37 +772,52 @@
   <!-- How It Works Section -->
   <section id="how-it-works">
     <div class="container">
-      <h2 class="section-title fade-in">4 Commands. 5 Minutes. Done.</h2>
+      <h2 class="section-title fade-in">5 Commands. 60 Seconds. Done.</h2>
 
       <div class="steps">
         <div class="step fade-in">
           <div class="step-number">1</div>
           <div class="step-content">
-            <div class="step-code">curl -fsSL https://phantomvault.riscent.com/install | sh</div>
-            <p class="step-note">One command. Detects your OS. Downloads the right binary.</p>
+            <div class="step-code">curl -fsSL https://phantomvault.riscent.com/install | bash</div>
+            <p class="step-note">Detects your OS + CPU. Downloads <code>phantom</code> and <code>vault-mcp</code> from GitHub Releases. SHA-256 verified. Drops into <code>/usr/local/bin</code> (sudo) or <code>~/.local/bin</code> (no sudo).</p>
           </div>
         </div>
         <div class="step fade-in">
           <div class="step-number">2</div>
           <div class="step-content">
             <div class="step-code">phantom init</div>
-            <p class="step-note">Uses Touch ID on Mac. No password file exists anywhere. Ever.</p>
+            <p class="step-note">Sets a master password. Creates your encrypted vault. Local only.</p>
           </div>
         </div>
         <div class="step fade-in">
           <div class="step-number">3</div>
           <div class="step-content">
-            <div class="step-code">phantom add STRIPE_SECRET_KEY</div>
-            <p class="step-note">Value entered via hidden prompt. Never visible. Never logged. Never in history.</p>
+            <div class="step-code">phantom edit</div>
+            <p class="step-note">Opens the vault in your <code>$EDITOR</code> as plain <code>KEY=VALUE</code> text. Save and quit — re-encrypted. Like a notepad, but the file on disk is always sealed.</p>
           </div>
         </div>
         <div class="step fade-in">
           <div class="step-number">4</div>
           <div class="step-content">
-            <div class="step-code">phantom mcp install</div>
-            <p class="step-note">Restart Claude Code. Your AI now has 6 secure tools. Zero config.</p>
+            <div class="step-code">phantom biometric enable</div>
+            <p class="step-note">One-time setup. Master password lives in macOS Keychain (encrypted by your login). After this, every <code>phantom</code> command and the <code>vault-mcp</code> server auto-unlock — no prompts. Touch ID adds an extra layer when present.</p>
           </div>
         </div>
+        <div class="step fade-in">
+          <div class="step-number">5</div>
+          <div class="step-content">
+            <div class="step-code">phantom mcp install</div>
+            <p class="step-note">Wires Phantom into Claude Code's MCP config. Restart Claude — your AI now sees secrets by reference name (<code>openai-key</code>), never by value.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="max-width: 720px; margin: 48px auto 0; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
+        <p style="margin: 0; color: var(--text);">
+          <strong style="color: var(--accent);">Optional but recommended:</strong>
+          <code>phantom guardrail set OPENAI_KEY --cap 50 --provider openai</code>
+          — cap monthly spend per key. Never wake up to an $82,000 surprise bill from a leaked credential.
+        </p>
       </div>
     </div>
   </section>

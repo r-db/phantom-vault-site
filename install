@@ -1,192 +1,121 @@
-#!/bin/sh
-# Phantom Vault Installer
-# Usage: curl -fsSL https://phantomvault.riscent.com/install | sh
+#!/usr/bin/env bash
+# Phantom Vault — one-line installer.
 #
-# This script detects your OS and architecture, downloads the correct
-# phantom-vault binary, and installs it to /usr/local/bin.
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/r-db/phantom-vault/main/install.sh | bash
+#
+# Or pin to a version:
+#   curl -fsSL https://raw.githubusercontent.com/r-db/phantom-vault/main/install.sh | PHANTOM_VERSION=v1.5.0 bash
+#
+# Installs both `phantom` and `vault-mcp` to /usr/local/bin (with sudo if
+# needed) or to ~/.local/bin (no sudo, must already be on PATH).
 
-set -e
+set -euo pipefail
 
-# ─── Config ───────────────────────────────────────────────────
 REPO="r-db/phantom-vault"
-INSTALL_DIR="/usr/local/bin"
-BINARY_NAME="phantom"
+VERSION="${PHANTOM_VERSION:-latest}"
 
-# ─── Colors (disable if not a terminal) ──────────────────────
-if [ -t 1 ]; then
-  GREEN='\033[0;32m'
-  RED='\033[0;31m'
-  YELLOW='\033[0;33m'
-  CYAN='\033[0;36m'
-  BOLD='\033[1m'
-  DIM='\033[2m'
-  NC='\033[0m'
-else
-  GREEN='' RED='' YELLOW='' CYAN='' BOLD='' DIM='' NC=''
-fi
+# --- Detect OS + arch ----------------------------------------------------------
+uname_s="$(uname -s)"
+uname_m="$(uname -m)"
 
-# ─── Helpers ──────────────────────────────────────────────────
-info()    { printf "${CYAN}  ✓${NC} %s\n" "$1"; }
-warn()    { printf "${YELLOW}  ⚠${NC} %s\n" "$1"; }
-error()   { printf "${RED}  ✗${NC} %s\n" "$1"; exit 1; }
-step()    { printf "\n${BOLD}  %s${NC}\n" "$1"; }
-
-# ─── Banner ───────────────────────────────────────────────────
-printf "\n"
-printf "${BOLD}  ⬇  Phantom Vault Installer${NC}\n"
-printf "${DIM}  Secrets exist but are never observable.${NC}\n"
-
-# ─── Detect OS ────────────────────────────────────────────────
-step "Detecting system..."
-
-OS="$(uname -s)"
-ARCH="$(uname -m)"
-
-case "$OS" in
-  Darwin) OS_NAME="macOS"; OS_TARGET="apple-darwin" ;;
-  Linux)  OS_NAME="Linux"; OS_TARGET="unknown-linux-gnu" ;;
-  *)      error "Unsupported operating system: $OS. Phantom Vault supports macOS and Linux." ;;
+case "$uname_s" in
+  Darwin) os="macos" ;;
+  Linux)  os="linux" ;;
+  *) echo "ERROR: unsupported OS '$uname_s'. Phantom currently supports macOS and Linux." >&2; exit 1 ;;
 esac
 
-case "$ARCH" in
-  x86_64|amd64)   ARCH_TARGET="x86_64" ;;
-  arm64|aarch64)   ARCH_TARGET="aarch64" ;;
-  *)               error "Unsupported architecture: $ARCH. Phantom Vault supports x86_64 and arm64." ;;
+case "$uname_m" in
+  arm64|aarch64) arch="arm64" ;;
+  x86_64|amd64)  arch="x64" ;;
+  *) echo "ERROR: unsupported arch '$uname_m'." >&2; exit 1 ;;
 esac
 
-# Friendly names for display
-case "$OS-$ARCH" in
-  Darwin-arm64)    FRIENDLY="macOS (Apple Silicon)" ;;
-  Darwin-x86_64)   FRIENDLY="macOS (Intel)" ;;
-  Linux-x86_64)    FRIENDLY="Linux (x86_64)" ;;
-  Linux-aarch64)   FRIENDLY="Linux (ARM64)" ;;
-  *)               FRIENDLY="$OS_NAME ($ARCH)" ;;
-esac
-
-# Detect OS version
-if [ "$OS" = "Darwin" ]; then
-  OS_VERSION="$(sw_vers -productVersion 2>/dev/null || echo 'unknown')"
-  info "$FRIENDLY — macOS $OS_VERSION"
-elif [ "$OS" = "Linux" ]; then
-  if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    OS_VERSION="${PRETTY_NAME:-Linux}"
-  else
-    OS_VERSION="Linux"
-  fi
-  info "$FRIENDLY — $OS_VERSION"
+# Linux arm64 is not yet built — flag it cleanly.
+if [ "$os" = "linux" ] && [ "$arch" = "arm64" ]; then
+  echo "ERROR: linux-arm64 is not yet a published build target." >&2
+  echo "Build from source: git clone https://github.com/$REPO && cd phantom-vault && cargo build --release -p phantom-cli -p vault-mcp" >&2
+  exit 1
 fi
 
-# ─── Check dependencies ──────────────────────────────────────
-if ! command -v curl >/dev/null 2>&1; then
-  error "curl is required but not found. Install curl and try again."
-fi
+suffix="${os}-${arch}"
 
-# ─── Get latest release version ───────────────────────────────
-step "Finding latest version..."
-
-LATEST_URL="https://api.github.com/repos/${REPO}/releases/latest"
-VERSION="$(curl -fsSL "$LATEST_URL" 2>/dev/null | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"//;s/".*//')"
-
-if [ -z "$VERSION" ]; then
-  warn "Could not detect latest version from GitHub."
-  warn "Using fallback: v1.0.0"
-  VERSION="v1.0.0"
-fi
-
-info "Latest version: $VERSION"
-
-# ─── Download ─────────────────────────────────────────────────
-step "Downloading phantom-vault ${VERSION} for ${ARCH_TARGET}-${OS_TARGET}..."
-
-TMPDIR="$(mktemp -d)"
-
-# Download phantom CLI
-FILENAME="phantom-${ARCH_TARGET}-${OS_TARGET}"
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${FILENAME}"
-TMPFILE="${TMPDIR}/${BINARY_NAME}"
-
-HTTP_CODE="$(curl -fsSL -w "%{http_code}" -o "$TMPFILE" "$DOWNLOAD_URL" 2>/dev/null || true)"
-
-if [ ! -f "$TMPFILE" ] || [ "$(wc -c < "$TMPFILE" | tr -d ' ')" -lt 1000 ]; then
-  rm -rf "$TMPDIR"
-  error "Download failed (HTTP $HTTP_CODE). Check https://github.com/${REPO}/releases for available builds."
-fi
-
-FILESIZE="$(wc -c < "$TMPFILE" | tr -d ' ')"
-FILESIZE_MB="$(echo "scale=1; $FILESIZE / 1048576" | bc 2>/dev/null || echo "?")"
-info "phantom CLI downloaded (${FILESIZE_MB} MB)"
-
-chmod +x "$TMPFILE"
-
-# Download vault-mcp (MCP server for Claude Code)
-MCP_FILENAME="vault-mcp-${ARCH_TARGET}-${OS_TARGET}"
-MCP_DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${MCP_FILENAME}"
-MCP_TMPFILE="${TMPDIR}/vault-mcp"
-
-HTTP_CODE="$(curl -fsSL -w "%{http_code}" -o "$MCP_TMPFILE" "$MCP_DOWNLOAD_URL" 2>/dev/null || true)"
-
-if [ -f "$MCP_TMPFILE" ] && [ "$(wc -c < "$MCP_TMPFILE" | tr -d ' ')" -gt 1000 ]; then
-  chmod +x "$MCP_TMPFILE"
-  MCP_FILESIZE="$(wc -c < "$MCP_TMPFILE" | tr -d ' ')"
-  MCP_FILESIZE_MB="$(echo "scale=1; $MCP_FILESIZE / 1048576" | bc 2>/dev/null || echo "?")"
-  info "vault-mcp downloaded (${MCP_FILESIZE_MB} MB)"
-  INSTALL_MCP=1
+# --- Decide install location ---------------------------------------------------
+if [ -w "/usr/local/bin" ]; then
+  install_dir="/usr/local/bin"
+  sudo_cmd=""
+elif command -v sudo >/dev/null 2>&1 && [ "${PHANTOM_NO_SUDO:-0}" != "1" ]; then
+  install_dir="/usr/local/bin"
+  sudo_cmd="sudo"
 else
-  warn "vault-mcp not available for this platform (Claude Code integration)"
-  INSTALL_MCP=0
-fi
-
-# ─── Verify binary runs ──────────────────────────────────────
-if ! "$TMPFILE" --version >/dev/null 2>&1; then
-  rm -rf "$TMPDIR"
-  error "Downloaded binary failed to execute. Your system may not be supported."
-fi
-
-INSTALLED_VERSION="$("$TMPFILE" --version 2>/dev/null || echo 'unknown')"
-
-# ─── Install ──────────────────────────────────────────────────
-step "Installing to ${INSTALL_DIR}..."
-
-if [ -w "$INSTALL_DIR" ]; then
-  mv "$TMPFILE" "${INSTALL_DIR}/${BINARY_NAME}"
-  [ "$INSTALL_MCP" = "1" ] && mv "$MCP_TMPFILE" "${INSTALL_DIR}/vault-mcp"
-  info "Installed (no sudo needed)"
-else
-  if command -v sudo >/dev/null 2>&1; then
-    printf "${DIM}  (requires sudo — enter your password)${NC}\n"
-    sudo mv "$TMPFILE" "${INSTALL_DIR}/${BINARY_NAME}"
-    [ "$INSTALL_MCP" = "1" ] && sudo mv "$MCP_TMPFILE" "${INSTALL_DIR}/vault-mcp"
-    info "Installed"
-  else
-    rm -rf "$TMPDIR"
-    error "Cannot write to ${INSTALL_DIR} and sudo is not available. Try: mv $TMPFILE ${INSTALL_DIR}/${BINARY_NAME}"
+  install_dir="$HOME/.local/bin"
+  sudo_cmd=""
+  mkdir -p "$install_dir"
+  if ! echo ":$PATH:" | grep -q ":$install_dir:"; then
+    needs_path_warning=1
   fi
 fi
 
-rm -rf "$TMPDIR"
-
-# ─── Verify installation ─────────────────────────────────────
-step "Verifying..."
-
-if command -v phantom >/dev/null 2>&1; then
-  info "$INSTALLED_VERSION"
+# --- Resolve the download URL --------------------------------------------------
+if [ "$VERSION" = "latest" ]; then
+  base="https://github.com/$REPO/releases/latest/download"
 else
-  warn "phantom was installed to ${INSTALL_DIR} but is not in your PATH."
-  warn "Add this to your shell profile:"
-  printf "\n    export PATH=\"\$PATH:${INSTALL_DIR}\"\n\n"
+  base="https://github.com/$REPO/releases/download/$VERSION"
 fi
 
-# ─── Done ─────────────────────────────────────────────────────
-printf "\n"
-printf "${GREEN}${BOLD}  🔐 Phantom Vault is ready.${NC}\n"
-printf "\n"
-printf "  ${BOLD}Next steps:${NC}\n"
-printf "    phantom init           Create your vault\n"
-printf "    phantom add SECRET     Store your first API key\n"
-printf "    phantom mcp install    Connect to Claude Code\n"
-printf "    phantom --help         See all commands\n"
-printf "\n"
-printf "  ${DIM}Docs: https://phantomvault.riscent.com${NC}\n"
-printf "  ${DIM}Source: https://github.com/${REPO}${NC}\n"
-printf "\n"
+phantom_url="$base/phantom-$suffix"
+vault_mcp_url="$base/vault-mcp-$suffix"
+sha_url="$base/SHA256SUMS-$suffix.txt"
+
+# --- Download to a temp dir ----------------------------------------------------
+tmp="$(mktemp -d -t phantom-install.XXXXXX)"
+trap 'rm -rf "$tmp"' EXIT
+
+echo "→ Downloading phantom-$suffix from $base ..."
+curl --fail --location --silent --show-error --output "$tmp/phantom" "$phantom_url"
+echo "→ Downloading vault-mcp-$suffix ..."
+curl --fail --location --silent --show-error --output "$tmp/vault-mcp" "$vault_mcp_url"
+
+# --- Verify checksums if available --------------------------------------------
+if curl --fail --location --silent --show-error --output "$tmp/sums.txt" "$sha_url" 2>/dev/null; then
+  echo "→ Verifying SHA256 checksums ..."
+  cd "$tmp"
+  # The published sums are computed on the suffixed names; rename for verify, then revert.
+  mv phantom "phantom-$suffix"
+  mv vault-mcp "vault-mcp-$suffix"
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 -c sums.txt
+  else
+    sha256sum -c sums.txt
+  fi
+  mv "phantom-$suffix" phantom
+  mv "vault-mcp-$suffix" vault-mcp
+  cd - >/dev/null
+else
+  echo "→ Checksum file not published for this release — skipping verification."
+fi
+
+chmod +x "$tmp/phantom" "$tmp/vault-mcp"
+
+# --- Install -------------------------------------------------------------------
+echo "→ Installing to $install_dir ..."
+$sudo_cmd mv "$tmp/phantom" "$install_dir/phantom"
+$sudo_cmd mv "$tmp/vault-mcp" "$install_dir/vault-mcp"
+
+# --- Done ----------------------------------------------------------------------
+echo
+echo "✓ Installed phantom + vault-mcp to $install_dir"
+"$install_dir/phantom" --version
+
+if [ "${needs_path_warning:-0}" = "1" ]; then
+  echo
+  echo "NOTE: $install_dir is not on your PATH."
+  echo "      Add this line to your shell profile (~/.zshrc or ~/.bashrc):"
+  echo "          export PATH=\"\$HOME/.local/bin:\$PATH\""
+fi
+
+echo
+echo "Next steps:"
+echo "  phantom init                       Create a new vault"
+echo "  phantom edit                       Open vault in \$EDITOR (encrypted notepad)"
+echo "  phantom mcp install                Wire vault into Claude Code"
