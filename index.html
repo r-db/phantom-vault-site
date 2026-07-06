@@ -167,6 +167,27 @@ p{color:var(--ink-2)} strong{color:var(--ink);font-weight:600}
 .install-alt{border-top:1px solid var(--hair);padding:14px 20px;font-family:var(--f-mono);font-size:.82rem;color:var(--mut);display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between}
 .install-alt code{color:var(--ink-2)}
 .install-ctas{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:28px}
+/* quickstart steps */
+.qs{max-width:720px;margin:40px auto 0}
+.qs-lab{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);text-align:center;margin-bottom:20px}
+.qs-steps{display:flex;flex-direction:column;gap:16px}
+.qs-step{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start}
+.qn{width:30px;height:30px;flex:none;border-radius:50%;background:var(--phantom-soft);color:var(--phantom);display:grid;place-items:center;font-family:var(--f-mono);font-weight:700;font-size:.85rem;margin-top:2px}
+.qt{font-size:.92rem;color:var(--ink-2);margin-bottom:8px}
+.cmd{display:flex;align-items:center;gap:12px;background:var(--void-2);border:1px solid var(--line);border-radius:var(--r-s);padding:11px 14px}
+.cmd code{flex:1;color:var(--ink);overflow-x:auto;white-space:nowrap;font-family:var(--f-mono);font-size:.85rem}
+.cmd code::before{content:"$ ";color:var(--phantom)}
+.cp{flex:none;font-family:var(--f-mono);font-size:.72rem;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:6px 11px;transition:all .2s;white-space:nowrap}
+.cp:hover{border-color:var(--phantom);color:var(--phantom)}
+.cp.done{color:var(--safe);border-color:var(--safe)}
+/* agent prompt */
+.agent{max-width:820px;margin:52px auto 0;background:linear-gradient(180deg,var(--phantom-soft),transparent 60%);border:1px solid var(--line);border-radius:var(--r-l);padding:clamp(24px,4vw,36px)}
+.agent h3{margin-top:12px}
+.agent-sub{font-size:.95rem;margin-top:10px;max-width:62ch}
+.agent-box{position:relative;margin-top:22px}
+.agent-prompt{background:var(--void);border:1px solid var(--line);border-radius:var(--r-m);padding:20px 20px 22px;font-family:var(--f-mono);font-size:.82rem;line-height:1.65;color:var(--ink-2);white-space:pre-wrap;overflow-x:auto}
+.cp.big{position:absolute;top:12px;right:12px;font-size:.76rem;padding:8px 14px;background:var(--void-2)}
+@media(max-width:560px){.cp.big{position:static;margin-top:12px;width:100%}}
 
 /* close */
 .close{text-align:center;position:relative;overflow:hidden}
@@ -325,12 +346,52 @@ body.flat .rv{opacity:1!important;transform:none!important;transition:none!impor
       </div>
       <div class="install-alt">
         <span>Prefer Cargo? <code>cargo install phantom-vault</code></span>
-        <span>Then: <code>phantom-vault mcp serve</code></span>
+        <span>Verify: <code>phantom-vault --version</code></span>
       </div>
     </div>
+
+    <!-- Quickstart — real commands -->
+    <div class="qs rv">
+      <div class="qs-lab">Then, four commands</div>
+      <ol class="qs-steps">
+        <li class="qs-step"><span class="qn">1</span><div><div class="qt">Create your vault (encrypted, on your machine)</div><div class="cmd"><code>phantom-vault init</code><button class="cp" data-copy="phantom-vault init">Copy</button></div></div></li>
+        <li class="qs-step"><span class="qn">2</span><div><div class="qt">Add a secret — you're prompted for the value, it's never echoed</div><div class="cmd"><code>phantom-vault set STRIPE_KEY</code><button class="cp" data-copy="phantom-vault set STRIPE_KEY">Copy</button></div></div></li>
+        <li class="qs-step"><span class="qn">3</span><div><div class="qt">Run any command — the secret is injected, the output scrubbed</div><div class="cmd"><code>phantom-vault run -- ./deploy.sh</code><button class="cp" data-copy="phantom-vault run -- ./deploy.sh">Copy</button></div></div></li>
+        <li class="qs-step"><span class="qn">4</span><div><div class="qt">Connect it to your AI assistant (Claude Code, Cursor, …)</div><div class="cmd"><code>phantom-vault mcp serve</code><button class="cp" data-copy="phantom-vault mcp serve">Copy</button></div></div></li>
+      </ol>
+    </div>
+
+    <!-- Agent prompt — the AI-native install -->
+    <div class="agent rv">
+      <span class="eyebrow">Or let your AI do it</span>
+      <h3>Paste this into Claude Code, Cursor, or any AI CLI.</h3>
+      <p class="agent-sub">It installs Phantom Vault, wires up the MCP server, and shows you how to use it — the AI-native way to onboard a tool built for AI.</p>
+      <div class="agent-box">
+<pre class="agent-prompt" id="agentPrompt">Set up Phantom Vault for me — the free, open-source vault that lets you
+use my API keys and secrets without ever seeing them.
+
+1. Install it: run
+     curl -fsSL https://phantomvault.riscent.com/install | bash
+   (or `cargo install phantom-vault` if Rust is available), then confirm
+   with `phantom-vault --version`.
+2. Initialize my vault: `phantom-vault init`.
+3. Register Phantom Vault's MCP server with this assistant so you can run
+   commands that use my secrets through `vault_run`. The server starts with
+   `phantom-vault mcp serve` — add it to my MCP config for this tool.
+4. Show me how to add a secret with `phantom-vault set &lt;NAME&gt;`, then prove
+   it works: store a test secret, run a command that uses it, and confirm
+   the value never appears in your output.
+5. Give me a 3-line cheat sheet for day-to-day use.
+
+Never print my secret values. Docs: https://github.com/r-db/phantom-vault</pre>
+        <button class="cp big" data-copy-el="agentPrompt">Copy prompt</button>
+      </div>
+    </div>
+
     <div class="install-ctas rv">
       <a href="https://github.com/r-db/phantom-vault" target="_blank" rel="noopener" class="btn btn-primary"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.6.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.3 9.3 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.6 5 .4.3.7 1 .7 2v2.9c0 .3.2.6.7.5A10 10 0 0 0 22 12.2C22 6.6 17.5 2 12 2z"/></svg>Star on GitHub</a>
-      <a href="https://github.com/r-db/phantom-vault#readme" target="_blank" rel="noopener" class="btn btn-ghost">Read the threat model</a>
+      <a href="/manual.html" class="btn btn-ghost">Read the manual</a>
+      <a href="https://github.com/r-db/phantom-vault#readme" target="_blank" rel="noopener" class="btn btn-ghost">Threat model &amp; docs</a>
     </div>
   </div>
 </section>
@@ -381,6 +442,15 @@ document.querySelectorAll('.rv').forEach(el=>rvo.observe(el));
 /* copy install */
 const cb=document.getElementById('copyBtn');
 cb.onclick=async()=>{try{await navigator.clipboard.writeText(document.getElementById('installCmd').textContent);cb.textContent='Copied';cb.classList.add('done');setTimeout(()=>{cb.textContent='Copy';cb.classList.remove('done')},1800)}catch(e){}};
+/* generic copy buttons (quickstart commands + agent prompt) */
+document.querySelectorAll('.cp').forEach(b=>{
+  b.addEventListener('click',async()=>{
+    let text=b.dataset.copy;
+    if(b.dataset.copyEl){const el=document.getElementById(b.dataset.copyEl);text=el?el.textContent:'';}
+    if(!text)return;
+    try{await navigator.clipboard.writeText(text);const o=b.textContent;b.textContent='Copied ✓';b.classList.add('done');setTimeout(()=>{b.textContent=o;b.classList.remove('done')},1600);}catch(e){}
+  });
+});
 
 /* SIGNATURE: self-redacting secret terminal */
 const term=document.getElementById('term');
