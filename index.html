@@ -1,1026 +1,413 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phantom Vault — Secrets exist but are never observable</title>
-  <meta name="description" content="The API key vault where secrets are used but never seen. Built for the age of AI agents. Hardware-backed encryption, multi-encoding sanitization, and MCP integration for Claude Code.">
-  <link rel="canonical" href="https://phantomvault.riscent.com/">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0A0B14" />
+<title>Phantom Vault — secrets are used, but never seen</title>
+<meta name="description" content="Phantom Vault is a free, open-source secret manager for the age of AI agents. Your API keys are injected into commands and never exposed to the AI — output sanitized, exfiltration caught by canaries, every access audited. AES-256-GCM, MCP server for Claude Code. Apache 2.0." />
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+<link rel="canonical" href="https://phantomvault.riscent.com/" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Phantom Vault — secrets are used, but never seen" />
+<meta property="og:description" content="A free, open-source vault that lets AI agents use your API keys without ever seeing them. Built for Claude Code and MCP." />
+<meta property="og:url" content="https://phantomvault.riscent.com/" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='6' fill='%230A0B14'/><path d='M12 3l7 3v5c0 4-3 7-7 9-4-2-7-5-7-9V6l7-3z' fill='none' stroke='%239B8CFF' stroke-width='1.5'/><rect x='9' y='10.5' width='6' height='2' rx='1' fill='%239B8CFF'/></svg>" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Phantom Vault","applicationCategory":"SecurityApplication","operatingSystem":"macOS, Linux","softwareVersion":"1.8.2","url":"https://phantomvault.riscent.com/","downloadUrl":"https://github.com/r-db/phantom-vault","license":"https://www.apache.org/licenses/LICENSE-2.0","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"An open-source secret manager for the age of AI agents. API keys are injected into commands and never exposed to the AI: output is sanitized, exfiltration attempts are caught by canary secrets, and every access is audited. AES-256-GCM encryption, memory protected with mlock and zeroization, hardware security module support, and an MCP server for Claude Code and other AI assistants.","author":{"@type":"Organization","name":"Riscent, LLC","url":"https://riscent.com/"},"featureList":["Secrets injected into subprocesses, never printed","Output sanitization that catches encoded variants","Canary secrets that detect exfiltration","HMAC-chained audit log","AES-256-GCM encryption, mlock + zeroization","Hardware security: Secure Enclave, TPM 2.0, FIDO2","MCP server for Claude Code and MCP-compatible assistants"]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"How is this different from a normal secret manager?","acceptedAnswer":{"@type":"Answer","text":"Traditional secret managers defend against untrusted external access. Phantom Vault defends against a trusted-but-powerful AI agent you've given access to your machine. The AI can run commands that use your secrets, but it never sees the secret values — they're injected into the subprocess and stripped from the output."}},
+{"@type":"Question","name":"Is Phantom Vault really free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Phantom Vault is free and open source under the Apache 2.0 license — a community donation from Riscent. You can read every line, audit it, and use it in commercial projects."}},
+{"@type":"Question","name":"Does it work with Claude Code?","acceptedAnswer":{"@type":"Answer","text":"Yes. Phantom Vault ships an MCP server. AI assistants call tools like vault_run to execute commands with secrets injected, and receive only sanitized output. Run: phantom-vault mcp serve."}},
+{"@type":"Question","name":"How are secrets protected?","acceptedAnswer":{"@type":"Answer","text":"Secrets are stored with AES-256-GCM encryption, protected in memory with mlock and automatic zeroization, and only exposed inside sandboxed subprocesses with filtered network egress. Access is recorded in an HMAC-chained audit log, and canary secrets detect exfiltration. Hardware security modules (Secure Enclave, TPM 2.0, FIDO2) are used where available."}}
+]}
+</script>
+<style>
+:root{
+  --void:#0A0B14; --void-2:#0F1120; --steel:#161930; --raised:#1C2039;
+  --ink:#EAEBF5; --ink-2:#B6B9CE; --mut:#797D9A;
+  --line:rgba(234,235,245,.09); --hair:rgba(234,235,245,.05);
+  --phantom:#9B8CFF; --phantom-2:#7C6BFF; --phantom-deep:#5A49CF; --phantom-soft:rgba(155,140,255,.13);
+  --redact:#2B2F49; --safe:#48E0A0; --safe-soft:rgba(72,224,160,.13); --danger:#FF6B7A; --danger-soft:rgba(255,107,122,.12);
+  --f-disp:'Chivo',system-ui,sans-serif; --f-body:'Inter',system-ui,sans-serif; --f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --container:1120px; --nav-h:66px; --ease:cubic-bezier(.2,.7,.2,1);
+  --r-s:9px; --r-m:13px; --r-l:18px; --r-xl:24px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:var(--f-body);font-size:16.5px;line-height:1.62;color:var(--ink-2);background:var(--void);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
+img,svg{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer;border:0;background:transparent;color:inherit}
+ul{list-style:none}
+h1,h2,h3{font-family:var(--f-disp);font-weight:800;line-height:1.04;letter-spacing:-.03em;color:var(--ink)}
+h1{font-size:clamp(2.5rem,6vw,4.6rem);letter-spacing:-.045em;line-height:1}
+h2{font-size:clamp(1.8rem,3.6vw,2.9rem);letter-spacing:-.035em}
+h3{font-size:1.2rem;letter-spacing:-.02em}
+p{color:var(--ink-2)} strong{color:var(--ink);font-weight:600}
+.mono{font-family:var(--f-mono)}
+.eyebrow{font-family:var(--f-mono);font-size:.72rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--phantom);display:inline-flex;align-items:center;gap:.6rem}
+.eyebrow::before{content:"";width:18px;height:1px;background:var(--phantom);opacity:.6}
+.container{width:100%;max-width:var(--container);margin:0 auto;padding:0 clamp(20px,5vw,44px)}
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+/* redaction motif */
+.redact{background:var(--redact);color:transparent;border-radius:4px;padding:0 .3em;user-select:none;position:relative}
+.redact::after{content:"••••••••";color:var(--mut);position:absolute;left:.3em;letter-spacing:.05em}
 
-  <!-- Open Graph -->
-  <meta property="og:title" content="Phantom Vault — LLM-Safe Secret Management">
-  <meta property="og:description" content="The API key vault where secrets are used but never seen. Built for the age of AI agents.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://phantomvault.riscent.com">
-  <meta property="og:site_name" content="Phantom Vault">
-  <meta property="og:image" content="https://phantomvault.riscent.com/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
+.btn{display:inline-flex;align-items:center;gap:.55rem;font-family:var(--f-disp);font-weight:700;font-size:.95rem;padding:13px 22px;border-radius:var(--r-s);transition:transform .2s var(--ease),background .2s,box-shadow .2s,border-color .2s}
+.btn svg{width:16px;height:16px}
+.btn-primary{background:var(--phantom);color:#0A0B14;box-shadow:0 8px 30px -10px rgba(155,140,255,.6)}
+.btn-primary:hover{background:#B3A6FF;transform:translateY(-2px)}
+.btn-ghost{border:1px solid var(--line);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--phantom);transform:translateY(-2px)}
 
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:site" content="@riscenttech">
-  <meta name="twitter:title" content="Phantom Vault — LLM-Safe Secret Management">
-  <meta name="twitter:description" content="The API key vault where secrets are used but never seen. Built for the age of AI agents.">
-  <meta name="twitter:image" content="https://phantomvault.riscent.com/og-image.png">
+/* nav */
+.nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:80;display:flex;align-items:center;background:rgba(10,11,20,.72);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid transparent;transition:border-color .3s,background .3s}
+.nav.scrolled{border-color:var(--hair);background:rgba(10,11,20,.9)}
+.nav-in{width:100%;max-width:var(--container);margin:0 auto;padding:0 clamp(20px,5vw,44px);display:flex;align-items:center;justify-content:space-between;gap:20px}
+.brand{display:inline-flex;align-items:center;gap:10px;font-family:var(--f-disp);font-weight:800;font-size:1.08rem;letter-spacing:-.02em;color:var(--ink)}
+.brand svg{width:26px;height:26px}
+.nav-links{display:flex;gap:26px}
+.nav-links a{font-size:.9rem;color:var(--mut);transition:color .2s}
+.nav-links a:hover{color:var(--ink)}
+.nav-right{display:flex;align-items:center;gap:14px}
+.nav-gh{display:inline-flex;align-items:center;gap:7px;font-family:var(--f-mono);font-size:.8rem;color:var(--ink-2)}
+.nav-gh svg{width:16px;height:16px}
+.nav .btn{padding:9px 16px;font-size:.85rem}
+.menu-btn{display:none;width:40px;height:40px;border:1px solid var(--line);border-radius:var(--r-s);align-items:center;justify-content:center}
+.menu-btn svg{width:20px;height:20px}
 
-  <!-- Additional SEO -->
-  <meta name="author" content="Riscent">
-  <meta name="keywords" content="secret management, API keys, Claude Code, MCP, AI security, vault, encryption, Secure Enclave">
-  <meta name="robots" content="index, follow">
-  <meta name="theme-color" content="#e94560">
+.rv{opacity:0;transform:translateY(20px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.rv.in{opacity:1;transform:none}
+.rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}
 
-  <!-- JSON-LD Structured Data -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Phantom Vault",
-    "description": "The API key vault where secrets are used but never seen. Built for the age of AI agents.",
-    "url": "https://phantomvault.riscent.com",
-    "applicationCategory": "SecurityApplication",
-    "operatingSystem": "macOS, Linux",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "author": {
-      "@type": "Organization",
-      "name": "Riscent",
-      "url": "https://riscent.com"
-    },
-    "license": "https://opensource.org/licenses/Apache-2.0"
-  }
-  </script>
+/* hero */
+.hero{position:relative;padding:calc(var(--nav-h) + clamp(40px,7vw,80px)) 0 clamp(50px,7vw,90px);overflow:hidden}
+.spectral{position:absolute;top:-15%;left:50%;transform:translateX(-50%);width:900px;height:600px;z-index:0;pointer-events:none;filter:blur(90px);opacity:.5;
+  background:radial-gradient(45% 50% at 50% 40%,rgba(124,107,255,.5),transparent 70%),radial-gradient(35% 40% at 70% 30%,rgba(90,73,207,.4),transparent 70%)}
+.hero-in{position:relative;z-index:1;display:grid;grid-template-columns:1.02fr .98fr;gap:clamp(30px,4vw,56px);align-items:center}
+.hero h1{margin:20px 0 0}
+.hero h1 .gh{color:var(--phantom);position:relative}
+.hero-lede{font-size:clamp(1.05rem,1.4vw,1.22rem);color:var(--ink-2);margin-top:22px;max-width:40ch;line-height:1.55}
+.free-pill{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:.76rem;color:var(--safe);background:var(--safe-soft);border:1px solid rgba(72,224,160,.25);border-radius:999px;padding:5px 12px;margin-top:22px}
+.free-pill .d{width:6px;height:6px;border-radius:50%;background:var(--safe)}
+.hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px;align-items:center}
+.hero-meta{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:26px;padding-top:22px;border-top:1px solid var(--hair);font-family:var(--f-mono);font-size:.78rem;color:var(--mut)}
+.hero-meta b{color:var(--ink-2);font-weight:500}
 
-  <style>
-    :root {
-      --bg: #0a0a0f;
-      --surface: #12121a;
-      --border: #1e1e2e;
-      --text: #cdd6f4;
-      --text-dim: #6c7086;
-      --accent: #e94560;
-      --green: #a6e3a1;
-      --code-bg: #181825;
-      --red: #f38ba8;
-    }
+/* terminal (signature) */
+.term{background:var(--void-2);border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden;box-shadow:0 40px 90px -40px rgba(0,0,0,.8),0 0 0 1px rgba(155,140,255,.06)}
+.term-bar{display:flex;align-items:center;gap:8px;padding:12px 15px;border-bottom:1px solid var(--hair);background:var(--void)}
+.term-bar .dot{width:11px;height:11px;border-radius:50%;background:var(--redact)}
+.term-bar .ttl{margin-left:8px;font-family:var(--f-mono);font-size:.76rem;color:var(--mut)}
+.term-body{padding:20px;font-family:var(--f-mono);font-size:.86rem;line-height:1.85;min-height:250px}
+.term-body .cmt{color:var(--mut)}
+.term-body .prm{color:var(--phantom)}
+.term-body .cmd{color:var(--ink)}
+.term-line{display:block;white-space:pre-wrap;word-break:break-word}
+.secret{color:var(--danger);background:var(--danger-soft);border-radius:3px;padding:0 3px;transition:all .5s var(--ease)}
+.secret.ghosted{color:var(--mut);background:var(--redact);letter-spacing:.04em}
+.ok{color:var(--safe)}
+.cursor{display:inline-block;width:8px;height:1.05em;background:var(--phantom);vertical-align:text-bottom;animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
+/* sections */
+.section{padding:clamp(60px,9vw,110px) 0;position:relative}
+.section-head{max-width:600px;margin-bottom:clamp(34px,5vw,52px)}
+.section-head h2{margin-top:16px}
+.section-head p{margin-top:16px;font-size:1.05rem}
+.center{text-align:center;margin:0 auto} .center .eyebrow{justify-content:center}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      min-height: 100vh;
-    }
+/* threat */
+.threat{background:linear-gradient(180deg,var(--void),var(--void-2))}
+.threat-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(18px,2.4vw,28px);align-items:center}
+.threat-card{background:var(--steel);border:1px solid var(--line);border-radius:var(--r-l);padding:28px}
+.threat-card.bad{border-color:rgba(255,107,122,.25)}
+.threat-card .lab{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+.threat-card.bad .lab{color:var(--danger)} .threat-card.good .lab{color:var(--safe)}
+.threat-card h3{margin-bottom:10px} .threat-card p{font-size:.95rem}
+.threat-card ul{margin-top:14px;display:flex;flex-direction:column;gap:9px}
+.threat-card li{font-size:.9rem;display:flex;gap:10px;align-items:flex-start;color:var(--ink-2)}
+.threat-card li::before{content:"→";color:var(--mut);flex:none}
+.threat-card.good li::before{content:"✓";color:var(--safe)}
 
-    /* Navigation */
-    .nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 1000;
-      background: rgba(10, 10, 15, 0.8);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 24px;
-    }
-    .nav-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .nav-logo {
-      font-weight: 700;
-      font-size: 1.1rem;
-      color: var(--text);
-      text-decoration: none;
-    }
-    .nav-logo span { color: var(--accent); }
-    .nav-links {
-      display: flex;
-      gap: 28px;
-      align-items: center;
-    }
-    .nav-links a {
-      color: var(--text-dim);
-      text-decoration: none;
-      font-size: 0.9rem;
-      transition: color 0.2s;
-    }
-    .nav-links a:hover { color: var(--accent); }
-    .nav-github {
-      display: flex;
-      align-items: center;
-    }
-    .nav-github svg { fill: var(--text-dim); transition: fill 0.2s; }
-    .nav-github:hover svg { fill: var(--accent); }
-    .nav-toggle {
-      display: none;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 8px;
-    }
-    .nav-toggle svg { fill: var(--text); }
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .nav-links.open {
-        display: flex;
-        flex-direction: column;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: rgba(10, 10, 15, 0.95);
-        backdrop-filter: blur(12px);
-        padding: 20px;
-        gap: 16px;
-        border-bottom: 1px solid var(--border);
-      }
-      .nav-toggle { display: block; }
-    }
+/* mechanism steps */
+.mech{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.step{background:var(--void-2);border:1px solid var(--line);border-radius:var(--r-m);padding:24px;position:relative;transition:border-color .3s,transform .3s}
+.step:hover{border-color:var(--phantom);transform:translateY(-3px)}
+.step .n{font-family:var(--f-mono);font-size:.78rem;color:var(--phantom)}
+.step h3{font-size:1.05rem;margin:12px 0 8px}
+.step p{font-size:.88rem;line-height:1.5}
 
-    /* Container */
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 80px 24px;
-    }
-    .container-wide {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 80px 24px;
-    }
+/* receipts */
+.receipts{background:var(--void-2)}
+.rec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.rec{background:var(--steel);border:1px solid var(--line);border-radius:var(--r-m);padding:22px;transition:border-color .2s}
+.rec:hover{border-color:var(--phantom)}
+.rec .ri{width:38px;height:38px;border-radius:10px;background:var(--phantom-soft);color:var(--phantom);display:grid;place-items:center;margin-bottom:14px}
+.rec .ri svg{width:19px;height:19px}
+.rec h3{font-size:1rem;margin-bottom:6px}
+.rec p{font-size:.86rem;line-height:1.5}
+.rec code{font-family:var(--f-mono);font-size:.82em;color:var(--phantom)}
 
-    /* Hero */
-    #hero { padding-top: 120px; }
-    h1 {
-      font-size: 3rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 8px;
-    }
-    h1 .vault { color: var(--accent); }
-    .tagline {
-      font-size: 1.15rem;
-      color: var(--text-dim);
-      font-style: italic;
-      margin-bottom: 48px;
-    }
-    .pitch {
-      font-size: 1.1rem;
-      margin-bottom: 48px;
-      line-height: 1.7;
-    }
-    .pitch strong { color: #fff; }
+/* install */
+.install-box{background:var(--void-2);border:1px solid var(--line);border-radius:var(--r-l);max-width:720px;margin:0 auto;overflow:hidden}
+.install-row{display:flex;align-items:center;gap:14px;padding:18px 20px;font-family:var(--f-mono);font-size:.92rem}
+.install-row .prm{color:var(--phantom)}
+.install-row code{color:var(--ink);flex:1;overflow-x:auto;white-space:nowrap}
+.copy-btn{flex:none;font-family:var(--f-mono);font-size:.78rem;color:var(--ink-2);border:1px solid var(--line);border-radius:var(--r-s);padding:7px 13px;transition:all .2s}
+.copy-btn:hover{border-color:var(--phantom);color:var(--phantom)}
+.copy-btn.done{color:var(--safe);border-color:var(--safe)}
+.install-alt{border-top:1px solid var(--hair);padding:14px 20px;font-family:var(--f-mono);font-size:.82rem;color:var(--mut);display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.install-alt code{color:var(--ink-2)}
+.install-ctas{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:28px}
 
-    /* Install box */
-    .install-box {
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px 28px;
-      margin-bottom: 24px;
-      position: relative;
-    }
-    .install-label {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--text-dim);
-      margin-bottom: 12px;
-    }
-    .install-cmd {
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      font-size: 1rem;
-      color: var(--green);
-      word-break: break-all;
-      user-select: all;
-      cursor: pointer;
-    }
-    .install-cmd:hover { color: #fff; }
-    .copy-btn {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: var(--border);
-      border: none;
-      color: var(--text-dim);
-      padding: 6px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.8rem;
-      transition: all 0.2s;
-    }
-    .copy-btn:hover { background: var(--accent); color: #fff; }
+/* close */
+.close{text-align:center;position:relative;overflow:hidden}
+.close .spectral{opacity:.4}
+.close h2{position:relative;z-index:1;max-width:20ch;margin:16px auto 0}
+.close h2 .gh{color:var(--phantom)}
+.close p{position:relative;z-index:1;max-width:52ch;margin:18px auto 0}
 
-    /* Hero buttons */
-    .hero-buttons {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 48px;
-      flex-wrap: wrap;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-size: 0.95rem;
-      font-weight: 500;
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-      border: 1px solid var(--accent);
-    }
-    .btn-primary:hover { background: #d13a52; }
-    .btn-outline {
-      background: transparent;
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+footer{border-top:1px solid var(--hair);padding:48px 0 34px}
+.foot-in{display:flex;flex-wrap:wrap;justify-content:space-between;gap:24px;align-items:flex-start}
+.foot-brand p{font-family:var(--f-mono);font-size:.82rem;color:var(--mut);max-width:38ch;margin-top:12px;line-height:1.6}
+.foot-links{display:flex;gap:44px;flex-wrap:wrap}
+.foot-col h4{font-family:var(--f-mono);font-size:.72rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:12px}
+.foot-col a{display:block;font-size:.88rem;color:var(--ink-2);margin-bottom:9px}
+.foot-col a:hover{color:var(--phantom)}
+.foot-bottom{margin-top:40px;padding-top:20px;border-top:1px solid var(--hair);display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;font-family:var(--f-mono);font-size:.78rem;color:var(--mut)}
 
-    /* Features grid */
-    .features {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 48px;
-    }
-    @media (max-width: 540px) {
-      .features { grid-template-columns: 1fr; }
-      h1 { font-size: 2.2rem; }
-    }
-    .feature {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-    }
-    .feature h3 {
-      font-size: 0.95rem;
-      margin-bottom: 6px;
-      color: #fff;
-    }
-    .feature p {
-      font-size: 0.85rem;
-      color: var(--text-dim);
-      line-height: 1.5;
-    }
+.mobile-menu{display:none;position:fixed;top:var(--nav-h);left:0;right:0;z-index:79;background:var(--void-2);border-bottom:1px solid var(--line);padding:14px clamp(20px,5vw,44px) 22px;flex-direction:column;gap:2px}
+.mobile-menu.open{display:flex}
+.mobile-menu a{padding:12px 4px;font-family:var(--f-disp);font-weight:700;border-bottom:1px solid var(--hair);color:var(--ink)}
 
-    /* Section styling */
-    section {
-      padding: 80px 0;
-    }
-    .section-title {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 16px;
-      letter-spacing: -0.01em;
-    }
-    .section-subtitle {
-      font-size: 1rem;
-      color: var(--text-dim);
-      margin-bottom: 48px;
-      max-width: 640px;
-    }
-
-    /* Fade-in animation */
-    .fade-in {
-      opacity: 0;
-      transform: translateY(20px);
-      transition: opacity 0.6s ease, transform 0.6s ease;
-    }
-    .fade-in.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    /* The Problem section */
-    #problem { background: var(--surface); }
-    .comparison {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-bottom: 32px;
-    }
-    @media (max-width: 768px) {
-      .comparison { grid-template-columns: 1fr; }
-    }
-    .terminal-box {
-      background: var(--code-bg);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .terminal-header {
-      padding: 12px 16px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .terminal-red { border: 1px solid var(--red); }
-    .terminal-red .terminal-header { background: rgba(243, 139, 168, 0.1); color: var(--red); }
-    .terminal-green { border: 1px solid var(--green); }
-    .terminal-green .terminal-header { background: rgba(166, 227, 161, 0.1); color: var(--green); }
-    .terminal-body {
-      padding: 16px 20px;
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      font-size: 0.85rem;
-      line-height: 1.6;
-      color: var(--text-dim);
-    }
-    .terminal-body .comment { color: var(--text-dim); }
-    .terminal-body .danger { color: var(--red); }
-    .terminal-body .safe { color: var(--green); }
-    .problem-text {
-      font-size: 1rem;
-      line-height: 1.7;
-      color: var(--text);
-      max-width: 800px;
-    }
-
-    /* How It Works */
-    #how-it-works { background: var(--bg); }
-    .steps {
-      display: grid;
-      gap: 32px;
-    }
-    .step {
-      display: grid;
-      grid-template-columns: 48px 1fr;
-      gap: 20px;
-      align-items: start;
-    }
-    @media (max-width: 540px) {
-      .step { grid-template-columns: 1fr; }
-      .step-number { display: none; }
-    }
-    .step-number {
-      width: 48px;
-      height: 48px;
-      background: var(--accent);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 1.2rem;
-      color: #fff;
-    }
-    .step-content { flex: 1; }
-    .step-code {
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px 20px;
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      font-size: 0.9rem;
-      color: var(--green);
-      margin-bottom: 8px;
-    }
-    .step-note {
-      font-size: 0.9rem;
-      color: var(--text-dim);
-    }
-
-    /* Security Architecture */
-    #security { background: var(--surface); }
-    .layers {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .layer {
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      padding: 20px 24px;
-      display: grid;
-      grid-template-columns: 100px 1fr;
-      gap: 16px;
-      align-items: center;
-    }
-    .layer:first-child { border-radius: 12px 12px 0 0; }
-    .layer:last-child { border-radius: 0 0 12px 12px; }
-    @media (max-width: 540px) {
-      .layer { grid-template-columns: 1fr; }
-    }
-    .layer-badge {
-      background: var(--accent);
-      color: #fff;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      text-align: center;
-    }
-    .layer-content h4 {
-      color: #fff;
-      font-size: 1rem;
-      margin-bottom: 4px;
-    }
-    .layer-content p {
-      color: var(--text-dim);
-      font-size: 0.9rem;
-    }
-
-    /* Blind Spots */
-    #blind-spots { background: var(--bg); }
-    .blind-spots-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 12px;
-      margin-bottom: 32px;
-    }
-    @media (max-width: 1024px) {
-      .blind-spots-grid { grid-template-columns: repeat(4, 1fr); }
-    }
-    @media (max-width: 640px) {
-      .blind-spots-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    .blind-spot {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-      text-align: center;
-    }
-    .blind-spot-num {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: 8px;
-    }
-    .blind-spot-name {
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      line-height: 1.4;
-    }
-    .btn-large {
-      padding: 16px 32px;
-      font-size: 1rem;
-    }
-
-    /* MCP Tools */
-    #mcp-tools { background: var(--surface); }
-    .tools-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-bottom: 32px;
-    }
-    @media (max-width: 640px) {
-      .tools-grid { grid-template-columns: 1fr; }
-    }
-    .tools-column {
-      background: var(--code-bg);
-      border-radius: 12px;
-      padding: 24px;
-    }
-    .tools-column-green { border: 1px solid var(--green); }
-    .tools-column-red { border: 1px solid var(--red); }
-    .tools-column h4 {
-      font-size: 0.9rem;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .tools-column-green h4 { color: var(--green); }
-    .tools-column-red h4 { color: var(--red); }
-    .tool-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin-bottom: 12px;
-      font-size: 0.9rem;
-    }
-    .tool-item:last-child { margin-bottom: 0; }
-    .tool-check { color: var(--green); }
-    .tool-x { color: var(--red); }
-    .tool-name { color: #fff; font-weight: 500; }
-    .tool-desc { color: var(--text-dim); }
-    .tools-note {
-      text-align: center;
-      color: var(--text-dim);
-      font-size: 0.9rem;
-      font-style: italic;
-    }
-
-    /* Community */
-    #community { background: var(--bg); }
-    .community-text {
-      font-size: 1rem;
-      line-height: 1.7;
-      color: var(--text);
-      margin-bottom: 48px;
-      max-width: 720px;
-    }
-    .community-cards {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-    }
-    @media (max-width: 768px) {
-      .community-cards { grid-template-columns: 1fr; }
-    }
-    .community-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      text-decoration: none;
-      transition: border-color 0.2s, transform 0.2s;
-    }
-    .community-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
-    }
-    .community-card h4 {
-      color: #fff;
-      font-size: 1rem;
-      margin-bottom: 8px;
-    }
-    .community-card p {
-      color: var(--text-dim);
-      font-size: 0.85rem;
-      line-height: 1.5;
-    }
-
-    /* Social & Donate */
-    #social {
-      background: var(--surface);
-      padding: 48px 0;
-    }
-    .social-inner {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 24px;
-    }
-    .social-links {
-      display: flex;
-      gap: 24px;
-    }
-    .social-link {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 48px;
-      height: 48px;
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      transition: border-color 0.2s, transform 0.2s;
-    }
-    .social-link:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
-    }
-    .social-link svg { fill: var(--text-dim); transition: fill 0.2s; }
-    .social-link:hover svg { fill: var(--accent); }
-    .donate-section { text-align: center; }
-    .btn-donate {
-      background: linear-gradient(135deg, var(--accent), #c13b50);
-      padding: 14px 32px;
-      font-size: 1rem;
-    }
-    .donate-note {
-      font-size: 0.8rem;
-      color: var(--text-dim);
-      margin-top: 12px;
-    }
-
-    /* Footer */
-    .footer {
-      background: var(--bg);
-      border-top: 1px solid var(--border);
-      padding: 32px 24px;
-    }
-    .footer-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-    }
-    .footer-brand {
-      font-weight: 600;
-      color: var(--text);
-    }
-    .footer-brand span { color: var(--accent); }
-    .footer-links {
-      display: flex;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-    .footer-links a {
-      color: var(--text-dim);
-      text-decoration: none;
-      font-size: 0.85rem;
-      transition: color 0.2s;
-    }
-    .footer-links a:hover { color: var(--accent); }
-    .footer-copy {
-      color: var(--text-dim);
-      font-size: 0.85rem;
-    }
-    @media (max-width: 640px) {
-      .footer-inner { flex-direction: column; text-align: center; }
-    }
-  </style>
+@media(max-width:920px){
+  .nav-links,.nav-gh{display:none}.menu-btn{display:flex}
+  .hero-in,.threat-grid{grid-template-columns:1fr;gap:36px}
+  .mech,.rec-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:560px){
+  .mech,.rec-grid{grid-template-columns:1fr}
+  .hero-cta{flex-direction:column;align-items:stretch}.hero-cta .btn{justify-content:center}
+  .install-row code{font-size:.8rem}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}.rv{opacity:1;transform:none;transition:none}.cursor{animation:none}}
+body.flat .rv{opacity:1!important;transform:none!important;transition:none!important}
+</style>
 </head>
 <body>
-  <!-- Navigation -->
-  <nav class="nav">
-    <div class="nav-inner">
-      <a href="#hero" class="nav-logo">Phantom <span>Vault</span></a>
-      <button class="nav-toggle" onclick="toggleNav()" aria-label="Toggle menu">
-        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </button>
-      <div class="nav-links" id="navLinks">
-        <a href="#hero">Install</a>
-        <a href="#how-it-works">How It Works</a>
-        <a href="#security">Security</a>
-        <a href="#community">Community</a>
-        <a href="https://github.com/r-db/phantom-vault" class="nav-github" aria-label="GitHub">
-          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-        </a>
+
+<header class="nav" id="nav">
+  <div class="nav-in">
+    <a href="#top" class="brand"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4-3 7-7 9-4-2-7-5-7-9V6l7-3z" fill="none" stroke="#9B8CFF" stroke-width="1.5"/><rect x="9" y="10.5" width="6" height="2" rx="1" fill="#9B8CFF"/></svg>Phantom Vault</a>
+    <nav class="nav-links">
+      <a href="#threat">The threat</a>
+      <a href="#how">How it works</a>
+      <a href="#security">Security</a>
+      <a href="#install">Install</a>
+    </nav>
+    <div class="nav-right">
+      <a class="nav-gh" href="https://github.com/r-db/phantom-vault" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.6.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.3 9.3 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.6 5 .4.3.7 1 .7 2v2.9c0 .3.2.6.7.5A10 10 0 0 0 22 12.2C22 6.6 17.5 2 12 2z"/></svg>Star</a>
+      <a href="#install" class="btn btn-primary">Install free</a>
+      <button class="menu-btn" id="menuBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </div>
+</header>
+<nav class="mobile-menu" id="mobileMenu">
+  <a href="#threat" data-close>The threat</a><a href="#how" data-close>How it works</a><a href="#security" data-close>Security</a><a href="#install" data-close>Install</a>
+</nav>
+
+<main id="top">
+<!-- HERO -->
+<section class="hero">
+  <div class="spectral"></div>
+  <div class="container hero-in">
+    <div class="hero-copy rv">
+      <span class="eyebrow">Secret manager · for the age of AI agents</span>
+      <h1>Your AI can use your secrets. It can't <span class="gh">see</span> them.</h1>
+      <p class="hero-lede">You gave an AI assistant the keys to your machine. Phantom Vault makes sure it can run your commands — and never read the keys.</p>
+      <div class="free-pill"><span class="d"></span> Free &amp; open source · Apache 2.0 · v1.8.2</div>
+      <div class="hero-cta">
+        <a href="#install" class="btn btn-primary">Install free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+        <a href="https://github.com/r-db/phantom-vault" target="_blank" rel="noopener" class="btn btn-ghost">Read the source</a>
+      </div>
+      <div class="hero-meta"><span><b>AES-256-GCM</b></span><span><b>Canary</b> exfil detection</span><span><b>MCP</b> for Claude Code</span></div>
+    </div>
+
+    <!-- SIGNATURE: the self-redacting secret terminal -->
+    <div class="term rv d1" aria-label="Phantom Vault terminal demonstration">
+      <div class="term-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ttl">phantom-vault — the AI never sees the key</span></div>
+      <div class="term-body" id="term"></div>
+    </div>
+  </div>
+</section>
+
+<!-- THREAT -->
+<section class="section threat" id="threat">
+  <div class="container">
+    <div class="section-head rv">
+      <span class="eyebrow">The new threat model</span>
+      <h2>Old vaults guard the door. You invited the threat inside.</h2>
+      <p>Every secret manager was built to stop <em>outsiders</em>. But you handed an AI agent the power to read your files, run your commands, and watch the output. The threat isn't at the door anymore.</p>
+    </div>
+    <div class="threat-grid">
+      <div class="threat-card bad rv">
+        <div class="lab">Without Phantom Vault</div>
+        <h3>The AI reads everything</h3>
+        <p>Grant an assistant shell access and it can see your <span class="mono">.env</span>, echo your keys, and pipe them anywhere. One leaked key is a drained account at 3am.</p>
+        <ul><li>Keys sit in plaintext env vars</li><li>Prompt injection can exfiltrate them</li><li>Secrets land in logs, output, history</li></ul>
+      </div>
+      <div class="threat-card good rv d1">
+        <div class="lab">With Phantom Vault</div>
+        <h3>The AI uses, never sees</h3>
+        <p>Secrets are injected straight into the subprocess and stripped from every byte of output before the AI ever gets it. It works — blind.</p>
+        <ul><li>Values never leave controlled contexts</li><li>Canary secrets trip on exfiltration</li><li>Every access is signed into an audit log</li></ul>
       </div>
     </div>
-  </nav>
+  </div>
+</section>
 
-  <!-- Hero Section -->
-  <section id="hero">
-    <div class="container">
-      <h1>Phantom <span class="vault">Vault</span></h1>
-      <p class="tagline">Your AI uses your API keys. Make sure nobody else does.</p>
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <div class="container">
+    <div class="section-head rv">
+      <span class="eyebrow">Used, but never seen</span>
+      <h2>Four things happen the moment a secret is needed.</h2>
+    </div>
+    <div class="mech">
+      <div class="step rv"><div class="n">01 · analyze</div><h3>Pre-flight the command</h3><p>The command is inspected for oracle and side-channel tricks before anything runs.</p></div>
+      <div class="step rv d1"><div class="n">02 · inject</div><h3>Slip the key in</h3><p>The secret is placed directly into the sandboxed subprocess environment — never printed, never echoed.</p></div>
+      <div class="step rv d2"><div class="n">03 · sanitize</div><h3>Scrub the output</h3><p>Every line returned is filtered for the value and its encoded variants (base64, hex, URL) before the AI sees it.</p></div>
+      <div class="step rv"><div class="n">04 · audit</div><h3>Sign the access</h3><p>The access is written to an HMAC-chained log. Canary secrets stand watch for exfiltration attempts.</p></div>
+    </div>
+  </div>
+</section>
 
-      <p class="pitch">
-        A free, open-source credential vault built for developers who code with AI. Store keys once. Your AI agent uses them, but never sees them. <strong>Free forever. No tiers. No account. No telemetry.</strong>
-      </p>
+<!-- SECURITY RECEIPTS -->
+<section class="section receipts" id="security">
+  <div class="container">
+    <div class="section-head rv">
+      <span class="eyebrow">The receipts</span>
+      <h2>Defense in depth — and you can read every line.</h2>
+      <p>No trust required. It's open source under Apache 2.0; audit it yourself.</p>
+    </div>
+    <div class="rec-grid">
+      <div class="rec rv"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div><h3>AES-256-GCM at rest</h3><p>Secrets encrypted at rest, protected in memory with <code>mlock</code> and automatic zeroization.</p></div>
+      <div class="rec rv d1"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg></div><h3>Canary secrets</h3><p>Decoy credentials that trip the instant something tries to exfiltrate them.</p></div>
+      <div class="rec rv d2"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><h3>HMAC-chained audit log</h3><p>Every access recorded in a tamper-evident chain — you can prove what touched what.</p></div>
+      <div class="rec rv"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><h3>Hardware-backed</h3><p>Secure Enclave, TPM 2.0, and FIDO2 used as an extra layer where available.</p></div>
+      <div class="rec rv d1"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>Rotation &amp; graphs</h3><p>Automatic rotation, secret dependency graphs, and multi-tenant namespace isolation.</p></div>
+      <div class="rec rv d2"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6M12 19h8"/></svg></div><h3>MCP server built in</h3><p>Ships an MCP server so Claude Code and others call <code>vault_run</code> and get only sanitized output.</p></div>
+    </div>
+  </div>
+</section>
 
-      <div class="install-box">
-        <div class="install-label">Install (macOS & Linux)</div>
-        <div class="install-cmd" id="cmd">curl -fsSL https://phantomvault.riscent.com/install | bash</div>
-        <button class="copy-btn" onclick="copyCmd()">Copy</button>
+<!-- INSTALL -->
+<section class="section" id="install">
+  <div class="container">
+    <div class="section-head center rv">
+      <span class="eyebrow">Free forever · a gift to the community</span>
+      <h2>Install it in one line.</h2>
+      <p>No account, no credit card, no telemetry. Riscent built this and gave it away.</p>
+    </div>
+    <div class="install-box rv">
+      <div class="install-row">
+        <span class="prm">$</span>
+        <code id="installCmd">curl -fsSL https://phantomvault.riscent.com/install | bash</code>
+        <button class="copy-btn" id="copyBtn">Copy</button>
       </div>
-
-      <div class="hero-buttons">
-        <a href="https://github.com/r-db/phantom-vault" class="btn btn-primary">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-          View on GitHub
-        </a>
-        <a href="#how-it-works" class="btn btn-outline">5-Command Setup →</a>
-      </div>
-
-      <div class="features">
-        <div class="feature">
-          <h3>📝 Edit Like a Notepad</h3>
-          <p><code>phantom edit</code> opens your vault in <code>$EDITOR</code> as <code>KEY=VALUE</code> text. Save — encrypted. No <code>add</code>/<code>remove</code> ceremony for adding 10 secrets at once.</p>
-        </div>
-        <div class="feature">
-          <h3>💸 Spending Guardrails</h3>
-          <p>Cap monthly USD spend per key per provider. Never wake up to an $82K bill from a leaked API key.</p>
-        </div>
-        <div class="feature">
-          <h3>🔐 Hardware-Backed Encryption</h3>
-          <p>AES-256-GCM + Argon2id. Master key in macOS Keychain (Touch ID when present). The vault on disk is opaque without you.</p>
-        </div>
-        <div class="feature">
-          <h3>🔗 Claude Code + MCP Native</h3>
-          <p>One command wires Phantom into Claude Code. Your AI agent gets tools — none return plaintext secrets. Auto-unlock at boot.</p>
-        </div>
-        <div class="feature">
-          <h3>🪤 Canary Detection</h3>
-          <p>Drop a honeypot fake credential in your code. If it's ever used, you get an instant alert. Catch the leak before it catches you.</p>
-        </div>
-        <div class="feature">
-          <h3>🔍 Multi-Encoding Sanitization</h3>
-          <p>Output scanned for secrets in 15+ encodings before returning to your AI. Base64, hex, URL-encoded — all caught.</p>
-        </div>
+      <div class="install-alt">
+        <span>Prefer Cargo? <code>cargo install phantom-vault</code></span>
+        <span>Then: <code>phantom-vault mcp serve</code></span>
       </div>
     </div>
-  </section>
-
-  <!-- The Problem Section -->
-  <section id="problem">
-    <div class="container-wide">
-      <h2 class="section-title fade-in">Your AI Can See All Your API Keys</h2>
-
-      <div class="comparison fade-in">
-        <div class="terminal-box terminal-red">
-          <div class="terminal-header">Without Phantom Vault</div>
-          <div class="terminal-body">
-<span class="comment"># Your .env file — visible to every AI agent</span>
-<span class="danger">STRIPE_SECRET_KEY=sk_live_51abc...</span>
-<span class="danger">DATABASE_URL=postgres://admin:p@ssw0rd@db.example.com...</span>
-<span class="danger">CLERK_SECRET_KEY=sk_live_xyz789...</span>
-
-<span class="comment"># Claude Code reads this. All of it. Every time.</span>
-          </div>
-        </div>
-        <div class="terminal-box terminal-green">
-          <div class="terminal-header">With Phantom Vault</div>
-          <div class="terminal-body">
-<span class="safe">> vault_run STRIPE_SECRET_KEY -- stripe deploy</span>
-
-<span class="safe">✓ Command analyzed: SAFE</span>
-<span class="safe">✓ Secret injected into sandbox</span>
-<span class="safe">✓ Output sanitized (0 leaks)</span>
-<span class="safe">✓ Secret memory zeroed</span>
-
-<span class="comment"># Claude never saw the key. It just used it.</span>
-          </div>
-        </div>
-      </div>
-
-      <p class="problem-text fade-in">
-        Every AI coding assistant — Claude Code, Cursor, Aider, Windsurf — reads your <code>.env</code> files directly. Your API keys sit in conversation context, logs, memory. If the AI is compromised by prompt injection, or the conversation gets saved/synced/forked, your keys go with it.
-      </p>
-
-      <p class="problem-text fade-in" style="margin-top: 24px;">
-        This isn't theoretical. February 2026: a three-person startup in Mexico woke up to an <strong style="color: var(--accent);">$82,314 Gemini bill</strong> over 48 hours — a stolen key, no refund, near bankruptcy (<a href="https://www.theregister.com/2026/03/03/gemini_api_key_82314_dollar_charge/" style="color: var(--accent);">The Register</a>). April 2026: Lakera scanned 46,500 npm packages and found <strong style="color: var(--accent);">1 in 13</strong> with Claude Code's "allow always" leaked live credentials (<a href="https://bdtechtalks.com/2026/04/27/claude-code-api-token-leak/" style="color: var(--accent);">bdtechtalks</a>). Phantom Vault eliminates this entire category of risk — locally, free, open-source, audit the crypto yourself.
-      </p>
+    <div class="install-ctas rv">
+      <a href="https://github.com/r-db/phantom-vault" target="_blank" rel="noopener" class="btn btn-primary"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.6.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.3 9.3 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.6 5 .4.3.7 1 .7 2v2.9c0 .3.2.6.7.5A10 10 0 0 0 22 12.2C22 6.6 17.5 2 12 2z"/></svg>Star on GitHub</a>
+      <a href="https://github.com/r-db/phantom-vault#readme" target="_blank" rel="noopener" class="btn btn-ghost">Read the threat model</a>
     </div>
-  </section>
+  </div>
+</section>
+</main>
 
-  <!-- How It Works Section -->
-  <section id="how-it-works">
-    <div class="container">
-      <h2 class="section-title fade-in">5 Commands. 60 Seconds. Done.</h2>
+<!-- CLOSE -->
+<section class="section close">
+  <div class="spectral"></div>
+  <div class="container">
+    <span class="eyebrow center" style="display:flex;justify-content:center">Give your AI the keys. Not the ability to keep them.</span>
+    <h2>Let the assistant work. Keep your secrets <span class="gh">phantom</span>.</h2>
+    <p>Free, open, and auditable. Install it before the next key leaks — not after.</p>
+    <div class="install-ctas">
+      <a href="#install" class="btn btn-primary">Install free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+      <a href="https://github.com/r-db/phantom-vault" target="_blank" rel="noopener" class="btn btn-ghost">github.com/r-db/phantom-vault</a>
+    </div>
+  </div>
+</section>
 
-      <div class="steps">
-        <div class="step fade-in">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <div class="step-code">curl -fsSL https://phantomvault.riscent.com/install | bash</div>
-            <p class="step-note">Detects your OS + CPU. Downloads <code>phantom</code> and <code>vault-mcp</code> from GitHub Releases. SHA-256 verified. Drops into <code>/usr/local/bin</code> (sudo) or <code>~/.local/bin</code> (no sudo).</p>
-          </div>
-        </div>
-        <div class="step fade-in">
-          <div class="step-number">2</div>
-          <div class="step-content">
-            <div class="step-code">phantom init</div>
-            <p class="step-note">Sets a master password. Creates your encrypted vault. Local only.</p>
-          </div>
-        </div>
-        <div class="step fade-in">
-          <div class="step-number">3</div>
-          <div class="step-content">
-            <div class="step-code">phantom edit</div>
-            <p class="step-note">Opens the vault in your <code>$EDITOR</code> as plain <code>KEY=VALUE</code> text. Save and quit — re-encrypted. Like a notepad, but the file on disk is always sealed.</p>
-          </div>
-        </div>
-        <div class="step fade-in">
-          <div class="step-number">4</div>
-          <div class="step-content">
-            <div class="step-code">phantom biometric enable</div>
-            <p class="step-note">One-time setup. Master password lives in macOS Keychain (encrypted by your login). After this, every <code>phantom</code> command and the <code>vault-mcp</code> server auto-unlock — no prompts. Touch ID adds an extra layer when present.</p>
-          </div>
-        </div>
-        <div class="step fade-in">
-          <div class="step-number">5</div>
-          <div class="step-content">
-            <div class="step-code">phantom mcp install</div>
-            <p class="step-note">Wires Phantom into Claude Code's MCP config. Restart Claude — your AI now sees secrets by reference name (<code>openai-key</code>), never by value.</p>
-          </div>
-        </div>
+<footer>
+  <div class="container">
+    <div class="foot-in">
+      <div class="foot-brand">
+        <a href="#top" class="brand"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4-3 7-7 9-4-2-7-5-7-9V6l7-3z" fill="none" stroke="#9B8CFF" stroke-width="1.5"/><rect x="9" y="10.5" width="6" height="2" rx="1" fill="#9B8CFF"/></svg>Phantom Vault</a>
+        <p>The API-key vault where secrets are used but never seen. A free, open-source gift from Riscent for the age of AI agents.</p>
       </div>
-
-      <div style="max-width: 720px; margin: 48px auto 0; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;">
-        <p style="margin: 0; color: var(--text);">
-          <strong style="color: var(--accent);">Optional but recommended:</strong>
-          <code>phantom guardrail set OPENAI_KEY --cap 50 --provider openai</code>
-          — cap monthly spend per key. Never wake up to an $82,000 surprise bill from a leaked credential.
-        </p>
+      <div class="foot-links">
+        <div class="foot-col"><h4>Project</h4><a href="https://github.com/r-db/phantom-vault" target="_blank" rel="noopener">GitHub</a><a href="#install">Install</a><a href="#security">Security</a><a href="https://github.com/r-db/phantom-vault#readme" target="_blank" rel="noopener">Docs</a></div>
+        <div class="foot-col"><h4>By Riscent</h4><a href="https://riscent.com" target="_blank" rel="noopener">riscent.com</a><a href="mailto:hello@riscent.com">Contact</a></div>
       </div>
     </div>
-  </section>
+    <div class="foot-bottom"><span>© 2026 Riscent, LLC · Apache 2.0</span><span>Secrets exist, but are never observable.</span></div>
+  </div>
+</footer>
 
-  <!-- Security Architecture Section -->
-  <section id="security">
-    <div class="container">
-      <h2 class="section-title fade-in">5 Layers Between Your Secrets and Everything Else</h2>
+<script>
+document.body.classList.add('js');
+const flat=location.search.includes('flat');
+if(flat){document.body.classList.add('flat');requestAnimationFrame(()=>document.querySelectorAll('.rv').forEach(el=>el.classList.add('in')));}
+const nav=document.getElementById('nav');
+addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>16),{passive:true});
+const mb=document.getElementById('menuBtn'),mm=document.getElementById('mobileMenu');
+mb.onclick=()=>mm.classList.toggle('open');
+document.querySelectorAll('[data-close]').forEach(a=>a.onclick=()=>mm.classList.remove('open'));
+const rvo=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');rvo.unobserve(e.target)}}),{rootMargin:'0px 0px -8% 0px',threshold:.05});
+document.querySelectorAll('.rv').forEach(el=>rvo.observe(el));
 
-      <div class="layers fade-in">
-        <div class="layer">
-          <div class="layer-badge">Layer 0</div>
-          <div class="layer-content">
-            <h4>Hardware Root of Trust</h4>
-            <p>Master key lives in Apple Secure Enclave or TPM 2.0. Physically cannot be extracted.</p>
-          </div>
-        </div>
-        <div class="layer">
-          <div class="layer-badge">Layer 1</div>
-          <div class="layer-content">
-            <h4>Dual-Layer Encryption</h4>
-            <p>AES-256-GCM + XChaCha20-Poly1305. Unique nonce per secret. Memory locked and zeroed.</p>
-          </div>
-        </div>
-        <div class="layer">
-          <div class="layer-badge">Layer 2</div>
-          <div class="layer-content">
-            <h4>Process Sandbox</h4>
-            <p>Commands run in network-restricted subprocesses. Only approved domains reachable.</p>
-          </div>
-        </div>
-        <div class="layer">
-          <div class="layer-badge">Layer 3</div>
-          <div class="layer-content">
-            <h4>Output Sanitization</h4>
-            <p>15+ encoding variants scanned. Base64, hex, URL, HTML entities — all caught.</p>
-          </div>
-        </div>
-        <div class="layer">
-          <div class="layer-badge">Layer 4</div>
-          <div class="layer-content">
-            <h4>Audit & Detection</h4>
-            <p>HMAC-chained logs. Canary honeypots. Trust-level tracking. Tamper-evident.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+/* copy install */
+const cb=document.getElementById('copyBtn');
+cb.onclick=async()=>{try{await navigator.clipboard.writeText(document.getElementById('installCmd').textContent);cb.textContent='Copied';cb.classList.add('done');setTimeout(()=>{cb.textContent='Copy';cb.classList.remove('done')},1800)}catch(e){}};
 
-  <!-- 14 Blind Spots Section -->
-  <section id="blind-spots">
-    <div class="container-wide">
-      <h2 class="section-title fade-in">We Found 14 Security Blind Spots in Existing Secret Managers</h2>
-      <p class="section-subtitle fade-in">These are the gaps that humans consistently miss because they think about secrets the way humans use them — not the way machines exploit them.</p>
-
-      <div class="blind-spots-grid fade-in">
-        <div class="blind-spot"><div class="blind-spot-num">1</div><div class="blind-spot-name">Master Password Paradox</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">2</div><div class="blind-spot-name">Exact-Match-Only Sanitization</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">3</div><div class="blind-spot-name">No Memory Protection</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">4</div><div class="blind-spot-name">Uncontrolled Subprocesses</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">5</div><div class="blind-spot-name">No Canary Detection</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">6</div><div class="blind-spot-name">Differential Oracle Attacks</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">7</div><div class="blind-spot-name">No Ephemeral Secrets</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">8</div><div class="blind-spot-name">No Process Lineage</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">9</div><div class="blind-spot-name">Clipboard Exfiltration</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">10</div><div class="blind-spot-name">Config File Attack Surface</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">11</div><div class="blind-spot-name">No Timing Protection</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">12</div><div class="blind-spot-name">No Dependency Graph</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">13</div><div class="blind-spot-name">No Multi-Tenant Isolation</div></div>
-        <div class="blind-spot"><div class="blind-spot-num">14</div><div class="blind-spot-name">No Dead Man's Switch</div></div>
-      </div>
-
-      <div style="text-align: center;" class="fade-in">
-        <a href="https://github.com/r-db/phantom-vault/blob/main/docs/ARCHITECTURE.md" class="btn btn-outline btn-large">Read the Full Security Analysis →</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- MCP Tools Section -->
-  <section id="mcp-tools">
-    <div class="container">
-      <h2 class="section-title fade-in">What Your AI Agent Can Do (and What It Can't)</h2>
-
-      <div class="tools-grid fade-in">
-        <div class="tools-column tools-column-green">
-          <h4><span>✓</span> 6 Tools Available</h4>
-          <div class="tool-item"><span class="tool-check">✓</span><span><span class="tool-name">vault_list</span> — <span class="tool-desc">See names, never values</span></span></div>
-          <div class="tool-item"><span class="tool-check">✓</span><span><span class="tool-name">vault_exists</span> — <span class="tool-desc">Check if a secret exists</span></span></div>
-          <div class="tool-item"><span class="tool-check">✓</span><span><span class="tool-name">vault_masked</span> — <span class="tool-desc">See last 4 chars only: ••••rXYZ</span></span></div>
-          <div class="tool-item"><span class="tool-check">✓</span><span><span class="tool-name">vault_run</span> — <span class="tool-desc">Execute commands with secrets injected</span></span></div>
-          <div class="tool-item"><span class="tool-check">✓</span><span><span class="tool-name">vault_health</span> — <span class="tool-desc">Check expirations and rotation status</span></span></div>
-          <div class="tool-item"><span class="tool-check">✓</span><span><span class="tool-name">vault_rotate</span> — <span class="tool-desc">Request rotation (you approve via Touch ID)</span></span></div>
-        </div>
-        <div class="tools-column tools-column-red">
-          <h4><span>✗</span> 4 Tools That Don't Exist</h4>
-          <div class="tool-item"><span class="tool-x">✗</span><span><span class="tool-name">vault_get</span> — <span class="tool-desc">Cannot retrieve full values</span></span></div>
-          <div class="tool-item"><span class="tool-x">✗</span><span><span class="tool-name">vault_export</span> — <span class="tool-desc">Cannot bulk extract</span></span></div>
-          <div class="tool-item"><span class="tool-x">✗</span><span><span class="tool-name">vault_dump</span> — <span class="tool-desc">Cannot dump the vault</span></span></div>
-          <div class="tool-item"><span class="tool-x">✗</span><span><span class="tool-name">vault_decrypt</span> — <span class="tool-desc">Cannot decrypt anything</span></span></div>
-        </div>
-      </div>
-
-      <p class="tools-note fade-in">These tools aren't hidden or restricted — they don't exist in the binary. You cannot call what does not exist.</p>
-    </div>
-  </section>
-
-  <!-- Community Section -->
-  <section id="community">
-    <div class="container">
-      <h2 class="section-title fade-in">Built in the Open</h2>
-
-      <p class="community-text fade-in">
-        Phantom Vault is open source under Apache 2.0. Security tools must be auditable. Every line of code is public. Every design decision is documented. We need security researchers, Rust developers, and anyone who cares about AI safety to review, challenge, and improve this.
-      </p>
-
-      <div class="community-cards fade-in">
-        <a href="https://github.com/r-db/phantom-vault/security" class="community-card">
-          <h4>Report a Vulnerability</h4>
-          <p>Found a way to extract a secret? Responsible disclosure welcome.</p>
-        </a>
-        <a href="https://github.com/r-db/phantom-vault" class="community-card">
-          <h4>Contribute Code</h4>
-          <p>Every PR requires a security test. Help us close the gaps.</p>
-        </a>
-        <a href="https://github.com/r-db/phantom-vault" class="community-card">
-          <h4>Star on GitHub</h4>
-          <p>Stars help others find this project.</p>
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- Social & Donate Section -->
-  <section id="social">
-    <div class="container">
-      <div class="social-inner">
-        <div class="social-links">
-          <a href="https://bsky.app/profile/riscent.com" class="social-link" aria-label="Bluesky">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-          </a>
-          <a href="https://x.com/riscenttech" class="social-link" aria-label="X/Twitter">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="https://discord.gg/phantomvault" class="social-link" aria-label="Discord">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
-          </a>
-        </div>
-        <div class="donate-section">
-          <a href="https://donate.stripe.com/phantomvault" class="btn btn-primary btn-donate">Support Phantom Vault — Donate</a>
-          <p class="donate-note">100% funds development. No investors. No ads. No tracking.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="footer-inner">
-      <div class="footer-brand">Phantom <span>Vault</span></div>
-      <div class="footer-links">
-        <a href="https://github.com/r-db/phantom-vault">GitHub</a>
-        <a href="https://github.com/r-db/phantom-vault/blob/main/USER_MANUAL.md">Docs</a>
-        <a href="/manual.html">User Manual</a>
-        <a href="https://github.com/r-db/phantom-vault/security">Security</a>
-        <a href="/architecture.html">Architecture</a>
-      </div>
-      <div class="footer-copy">Apache 2.0 · Built by <a href="https://riscent.com">Riscent</a></div>
-    </div>
-  </footer>
-
-  <script>
-    // Copy command
-    function copyCmd() {
-      const cmd = document.getElementById('cmd').textContent;
-      navigator.clipboard.writeText(cmd).then(() => {
-        const btn = document.querySelector('.copy-btn');
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy', 2000);
-      });
-    }
-
-    // Mobile nav toggle
-    function toggleNav() {
-      document.getElementById('navLinks').classList.toggle('open');
-    }
-
-    // Close mobile nav when clicking a link
-    document.querySelectorAll('.nav-links a').forEach(link => {
-      link.addEventListener('click', () => {
-        document.getElementById('navLinks').classList.remove('open');
-      });
-    });
-
-    // Intersection Observer for fade-in animations
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-
-    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
-  </script>
+/* SIGNATURE: self-redacting secret terminal */
+const term=document.getElementById('term');
+const lines=[
+  {t:'<span class="cmt"># your AI assistant runs a deploy — it needs the key</span>'},
+  {t:'<span class="prm">agent$</span> <span class="cmd">phantom-vault run -- deploy --key $STRIPE_KEY</span>'},
+  {t:'<span class="cmt"># the real key is injected into the subprocess…</span>'},
+  {t:'  STRIPE_KEY = <span class="secret" id="sec">sk_live_a4f9K2p7Qx8LmZ3rT6bV1nH</span>',reveal:true},
+  {t:'<span class="cmt"># …then ghosted before the AI ever sees a byte</span>',ghost:true},
+  {t:'  <span class="ok">✓</span> deploy complete · key never printed to output'},
+  {t:'  <span class="ok">✓</span> access signed to audit log · canaries quiet'},
+  {t:'<span class="prm">agent$</span> <span class="cursor"></span>'}
+];
+function type(){
+  term.innerHTML='';let i=0;
+  const add=()=>{
+    if(i>=lines.length){setTimeout(()=>{ /* loop */ if(!flat){type()} },5200);return}
+    const l=lines[i];const el=document.createElement('span');el.className='term-line';el.innerHTML=l.t;term.appendChild(el);
+    if(l.ghost){const s=document.getElementById('sec');if(s){setTimeout(()=>{s.classList.add('ghosted');s.textContent='••••••••••••••••••••••••';},350)}}
+    i++;setTimeout(add,l.reveal?820:l.ghost?1100:640);
+  };
+  add();
+}
+if(flat){ /* static full render for screenshots */
+  lines.forEach(l=>{const el=document.createElement('span');el.className='term-line';el.innerHTML=l.t;term.appendChild(el);});
+  const s=document.getElementById('sec');if(s){s.classList.add('ghosted');s.textContent='••••••••••••••••••••••••';}
+} else { type(); }
+</script>
 </body>
 </html>

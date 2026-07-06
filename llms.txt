@@ -1,0 +1,14 @@
+# Phantom Vault
+
+> Phantom Vault is a free, open-source secret manager for the age of AI agents. It lets AI coding assistants (like Claude Code) run commands that use your API keys and secrets without ever seeing the secret values: secrets are injected into sandboxed subprocesses, output is sanitized (including encoded variants), exfiltration attempts are caught by canary secrets, and every access is written to an HMAC-chained audit log. AES-256-GCM encryption, memory protected with mlock and zeroization, and hardware security module support (Secure Enclave, TPM 2.0, FIDO2). Ships an MCP server for Claude Code and MCP-compatible assistants. Apache 2.0. A community donation from Riscent.
+
+## Install
+- curl -fsSL https://phantomvault.riscent.com/install | bash
+- or: cargo install phantom-vault
+- MCP server: phantom-vault mcp serve
+
+## Source
+- https://github.com/r-db/phantom-vault (Apache 2.0, v1.8.2)
+
+## Maintainer
+- Riscent, LLC — https://riscent.com
