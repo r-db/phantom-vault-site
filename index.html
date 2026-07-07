@@ -4,13 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0A0B14" />
-<title>Phantom Vault — secrets are used, but never seen</title>
-<meta name="description" content="Phantom Vault is a free, open-source secret manager for the age of AI agents. Your API keys are injected into commands and never exposed to the AI — output sanitized, exfiltration caught by canaries, every access audited. AES-256-GCM, MCP server for Claude Code. Apache 2.0." />
+<title>Phantom Vault — your AI uses secrets by name, not by value</title>
+<meta name="description" content="Phantom Vault is a free, open-source Rust secret manager for the age of AI agents. An AI calls your secrets by name and runs commands with them — the value shown as [REDACTED], not returned. AES-256-GCM at rest, MCP server for Claude Code. Apache 2.0. Early software (v0.1.0) under active security audit." />
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
 <link rel="canonical" href="https://phantomvault.riscent.com/" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Phantom Vault — secrets are used, but never seen" />
-<meta property="og:description" content="A free, open-source vault that lets AI agents use your API keys without ever seeing them. Built for Claude Code and MCP." />
+<meta property="og:title" content="Phantom Vault — your AI uses secrets by name, not by value" />
+<meta property="og:description" content="A free, open-source vault that lets AI agents use your API keys by name — the value shown as [REDACTED] instead of returned. Early software under active security audit. Built for Claude Code and MCP." />
 <meta property="og:url" content="https://phantomvault.riscent.com/" />
 <meta name="twitter:card" content="summary_large_image" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -18,14 +18,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='6' fill='%230A0B14'/><path d='M12 3l7 3v5c0 4-3 7-7 9-4-2-7-5-7-9V6l7-3z' fill='none' stroke='%239B8CFF' stroke-width='1.5'/><rect x='9' y='10.5' width='6' height='2' rx='1' fill='%239B8CFF'/></svg>" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Phantom Vault","applicationCategory":"SecurityApplication","operatingSystem":"macOS, Linux","softwareVersion":"1.8.2","url":"https://phantomvault.riscent.com/","downloadUrl":"https://github.com/r-db/phantom-vault","license":"https://www.apache.org/licenses/LICENSE-2.0","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"An open-source secret manager for the age of AI agents. API keys are injected into commands and never exposed to the AI: output is sanitized, exfiltration attempts are caught by canary secrets, and every access is audited. AES-256-GCM encryption, memory protected with mlock and zeroization, hardware security module support, and an MCP server for Claude Code and other AI assistants.","author":{"@type":"Organization","name":"Riscent, LLC","url":"https://riscent.com/"},"featureList":["Secrets injected into subprocesses, never printed","Output sanitization that catches encoded variants","Canary secrets that detect exfiltration","HMAC-chained audit log","AES-256-GCM encryption, mlock + zeroization","Hardware security: Secure Enclave, TPM 2.0, FIDO2","MCP server for Claude Code and MCP-compatible assistants"]}
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Phantom Vault","applicationCategory":"SecurityApplication","operatingSystem":"macOS, Linux","softwareVersion":"0.1.0","url":"https://phantomvault.riscent.com/","downloadUrl":"https://github.com/r-db/phantom-vault","license":"https://www.apache.org/licenses/LICENSE-2.0","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"An early, open-source Rust secret manager for the age of AI agents. An AI calls a secret by name and runs commands with it via an MCP server (vault_run), with the value shown as [REDACTED] rather than returned. Secrets are encrypted at rest with AES-256-GCM, the master password is derived with Argon2, and keys are zeroized in memory. Version 0.1.0 — early software under active, independent security audit. Stronger containment features (output sanitization, canary detection, sandbox egress filtering, hardware backing) exist in the codebase but are not yet independently verified and are labeled as planned.","author":{"@type":"Organization","name":"Riscent, LLC","url":"https://riscent.com/"},"featureList":["Secrets called by name via an MCP server; value shown as [REDACTED]","AES-256-GCM encryption at rest","Argon2 master password; keys zeroized in memory","14-command CLI (init, set, run, mcp, audit, and more)","Open source, Apache 2.0"]}
 </script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
-{"@type":"Question","name":"How is this different from a normal secret manager?","acceptedAnswer":{"@type":"Answer","text":"Traditional secret managers defend against untrusted external access. Phantom Vault defends against a trusted-but-powerful AI agent you've given access to your machine. The AI can run commands that use your secrets, but it never sees the secret values — they're injected into the subprocess and stripped from the output."}},
+{"@type":"Question","name":"How is this different from a normal secret manager?","acceptedAnswer":{"@type":"Answer","text":"Traditional secret managers defend against untrusted external access. Phantom Vault is built for a different threat: a trusted-but-powerful AI agent you've given access to your machine. The AI runs commands that use your secrets by calling them by name, and the value is shown as [REDACTED] rather than returned. Note: Phantom Vault is early (v0.1.0) and its containment guarantees are under active independent audit — treat 'the AI can never get the value' as a design goal being verified, not a finished guarantee."}},
 {"@type":"Question","name":"Is Phantom Vault really free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Phantom Vault is free and open source under the Apache 2.0 license — a community donation from Riscent. You can read every line, audit it, and use it in commercial projects."}},
-{"@type":"Question","name":"Does it work with Claude Code?","acceptedAnswer":{"@type":"Answer","text":"Yes. Phantom Vault ships an MCP server. AI assistants call tools like vault_run to execute commands with secrets injected, and receive only sanitized output. Run: phantom-vault mcp serve."}},
-{"@type":"Question","name":"How are secrets protected?","acceptedAnswer":{"@type":"Answer","text":"Secrets are stored with AES-256-GCM encryption, protected in memory with mlock and automatic zeroization, and only exposed inside sandboxed subprocesses with filtered network egress. Access is recorded in an HMAC-chained audit log, and canary secrets detect exfiltration. Hardware security modules (Secure Enclave, TPM 2.0, FIDO2) are used where available."}}
+{"@type":"Question","name":"Does it work with Claude Code?","acceptedAnswer":{"@type":"Answer","text":"Yes. Phantom Vault ships an MCP server. AI assistants call tools like vault_run to execute commands with secrets injected, and the value is shown as [REDACTED] in the output. Run: phantom-vault mcp serve."}},
+{"@type":"Question","name":"How are secrets protected?","acceptedAnswer":{"@type":"Answer","text":"Verified today: secrets are encrypted at rest with AES-256-GCM, the master password is derived with Argon2, and keys are zeroized in memory; the vault is explicitly unlocked and sealed. Implemented in the codebase and being hardened, but not yet independently verified (labeled as planned): output sanitization, canary secrets, a tamper-evident audit chain, sandboxed subprocess egress filtering, and hardware backing (Secure Enclave, TPM 2.0, FIDO2). We label these as planned rather than claim them until an outside audit confirms them — for a security tool, understating beats overstating."}}
 ]}
 </script>
 <style>
@@ -136,6 +136,12 @@ p{color:var(--ink-2)} strong{color:var(--ink);font-weight:600}
 .threat-card li{font-size:.9rem;display:flex;gap:10px;align-items:flex-start;color:var(--ink-2)}
 .threat-card li::before{content:"→";color:var(--mut);flex:none}
 .threat-card.good li::before{content:"✓";color:var(--safe)}
+/* verification status badges — honesty layer */
+.tag{display:inline-block;font-family:var(--f-mono);font-size:.6rem;letter-spacing:.09em;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-bottom:10px;font-weight:500}
+.tag-ok{color:var(--safe);background:var(--safe-soft);border:1px solid rgba(72,224,160,.3)}
+.tag-wip{color:var(--phantom);background:var(--phantom-soft);border:1px solid rgba(155,140,255,.3)}
+.honest{max-width:760px;margin:18px auto 0;text-align:center;font-size:.88rem;color:var(--mut);line-height:1.55;background:var(--void-2);border:1px solid var(--line);border-radius:var(--r-m);padding:14px 20px}
+.honest b{color:var(--safe)} .honest i{color:var(--phantom);font-style:normal}
 
 /* mechanism steps */
 .mech{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
@@ -252,19 +258,19 @@ body.flat .rv{opacity:1!important;transform:none!important;transition:none!impor
   <div class="container hero-in">
     <div class="hero-copy rv">
       <span class="eyebrow">Secret manager · for the age of AI agents</span>
-      <h1>Your AI can use your secrets. It can't <span class="gh">see</span> them.</h1>
-      <p class="hero-lede">You gave an AI assistant the keys to your machine. Phantom Vault makes sure it can run your commands — and never read the keys.</p>
-      <div class="free-pill"><span class="d"></span> Free &amp; open source · Apache 2.0 · v1.8.2</div>
+      <h1>Your AI uses your secrets — <span class="gh">by name</span>, not by value.</h1>
+      <p class="hero-lede">You gave an AI assistant access to your machine. Phantom Vault runs your commands <em>through</em> your secrets — calling them by name, showing the value as <span class="mono">[REDACTED]</span> instead of returning it. Early, open source, and under active security audit.</p>
+      <div class="free-pill"><span class="d"></span> Free &amp; open source · Apache 2.0 · v0.1.0 · early</div>
       <div class="hero-cta">
         <a href="#install" class="btn btn-primary">Install free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
         <a href="https://github.com/r-db/phantom-vault" target="_blank" rel="noopener" class="btn btn-ghost">Read the source</a>
       </div>
-      <div class="hero-meta"><span><b>AES-256-GCM</b></span><span><b>Canary</b> exfil detection</span><span><b>MCP</b> for Claude Code</span></div>
+      <div class="hero-meta"><span><b>AES-256-GCM</b> at rest</span><span><b>vault_run</b> — by name</span><span><b>MCP</b> for Claude Code</span></div>
     </div>
 
     <!-- SIGNATURE: the self-redacting secret terminal -->
     <div class="term rv d1" aria-label="Phantom Vault terminal demonstration">
-      <div class="term-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ttl">phantom-vault — the AI never sees the key</span></div>
+      <div class="term-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ttl">phantom-vault — secrets by name, value redacted</span></div>
       <div class="term-body" id="term"></div>
     </div>
   </div>
@@ -287,9 +293,9 @@ body.flat .rv{opacity:1!important;transform:none!important;transition:none!impor
       </div>
       <div class="threat-card good rv d1">
         <div class="lab">With Phantom Vault</div>
-        <h3>The AI uses, never sees</h3>
-        <p>Secrets are injected straight into the subprocess and stripped from every byte of output before the AI ever gets it. It works — blind.</p>
-        <ul><li>Values never leave controlled contexts</li><li>Canary secrets trip on exfiltration</li><li>Every access is signed into an audit log</li></ul>
+        <h3>The AI works through the vault</h3>
+        <p>Secrets are injected into the subprocess, and the value comes back as <span class="mono">[REDACTED]</span> — the AI uses the secret without the raw string in its output.</p>
+        <ul><li>Encrypted at rest, master-password locked</li><li>Called by name via <span class="mono">vault_run</span></li><li>Every use written to the audit log</li></ul>
       </div>
     </div>
   </div>
@@ -299,15 +305,16 @@ body.flat .rv{opacity:1!important;transform:none!important;transition:none!impor
 <section class="section" id="how">
   <div class="container">
     <div class="section-head rv">
-      <span class="eyebrow">Used, but never seen</span>
-      <h2>Four things happen the moment a secret is needed.</h2>
+      <span class="eyebrow">How it's designed to work</span>
+      <h2>What happens when a secret is needed.</h2>
     </div>
     <div class="mech">
-      <div class="step rv"><div class="n">01 · analyze</div><h3>Pre-flight the command</h3><p>The command is inspected for oracle and side-channel tricks before anything runs.</p></div>
-      <div class="step rv d1"><div class="n">02 · inject</div><h3>Slip the key in</h3><p>The secret is placed directly into the sandboxed subprocess environment — never printed, never echoed.</p></div>
-      <div class="step rv d2"><div class="n">03 · sanitize</div><h3>Scrub the output</h3><p>Every line returned is filtered for the value and its encoded variants (base64, hex, URL) before the AI sees it.</p></div>
-      <div class="step rv"><div class="n">04 · audit</div><h3>Sign the access</h3><p>The access is written to an HMAC-chained log. Canary secrets stand watch for exfiltration attempts.</p></div>
+      <div class="step rv"><span class="tag tag-wip">under audit</span><div class="n">01 · analyze</div><h3>Pre-flight the command</h3><p>Command pre-analysis (in the codebase; being hardened) checks for oracle and side-channel tricks before anything runs.</p></div>
+      <div class="step rv d1"><span class="tag tag-ok">verified</span><div class="n">02 · inject</div><h3>Slip the key in</h3><p>The secret is placed into the subprocess environment for that one command — not printed, not echoed.</p></div>
+      <div class="step rv d2"><span class="tag tag-wip">under audit</span><div class="n">03 · sanitize</div><h3>Scrub the output</h3><p>Output is filtered for the value and its encoded variants (base64, hex, URL) before returning. Effectiveness is under active audit.</p></div>
+      <div class="step rv"><span class="tag tag-wip">under audit</span><div class="n">04 · audit</div><h3>Record the access</h3><p>Every access is written to the audit log. Tamper-evident chaining and canary detection are implemented and being verified.</p></div>
     </div>
+    <p class="honest"><b>Verified</b> means proven in the code today. <i>Under audit</i> means it exists but an outside checker (not us) is still confirming it holds — until then we don't claim it as fact.</p>
   </div>
 </section>
 
@@ -315,17 +322,17 @@ body.flat .rv{opacity:1!important;transform:none!important;transition:none!impor
 <section class="section receipts" id="security">
   <div class="container">
     <div class="section-head rv">
-      <span class="eyebrow">The receipts</span>
-      <h2>Defense in depth — and you can read every line.</h2>
-      <p>No trust required. It's open source under Apache 2.0; audit it yourself.</p>
+      <span class="eyebrow">What's proven, and what's not</span>
+      <h2>The honest security status.</h2>
+      <p>It's open source under Apache 2.0 — read every line. Each item below is labeled <span class="mono" style="color:var(--safe)">verified</span> (proven in the code) or <span class="mono" style="color:var(--phantom)">under audit / planned</span> (implemented but not yet independently confirmed). We understate on purpose.</p>
     </div>
     <div class="rec-grid">
-      <div class="rec rv"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div><h3>AES-256-GCM at rest</h3><p>Secrets encrypted at rest, protected in memory with <code>mlock</code> and automatic zeroization.</p></div>
-      <div class="rec rv d1"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg></div><h3>Canary secrets</h3><p>Decoy credentials that trip the instant something tries to exfiltrate them.</p></div>
-      <div class="rec rv d2"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><h3>HMAC-chained audit log</h3><p>Every access recorded in a tamper-evident chain — you can prove what touched what.</p></div>
-      <div class="rec rv"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><h3>Hardware-backed</h3><p>Secure Enclave, TPM 2.0, and FIDO2 used as an extra layer where available.</p></div>
-      <div class="rec rv d1"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>Rotation &amp; graphs</h3><p>Automatic rotation, secret dependency graphs, and multi-tenant namespace isolation.</p></div>
-      <div class="rec rv d2"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6M12 19h8"/></svg></div><h3>MCP server built in</h3><p>Ships an MCP server so Claude Code and others call <code>vault_run</code> and get only sanitized output.</p></div>
+      <div class="rec rv"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div><span class="tag tag-ok">verified</span><h3>AES-256-GCM at rest</h3><p>Secrets encrypted at rest; master password derived with Argon2; keys zeroized in memory.</p></div>
+      <div class="rec rv d1"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6M12 19h8"/></svg></div><span class="tag tag-ok">verified</span><h3>MCP server &amp; CLI</h3><p>A 14-command CLI and an MCP server. Claude Code calls <code>vault_run</code>; the value comes back as <code>[REDACTED]</code>.</p></div>
+      <div class="rec rv d2"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><span class="tag tag-ok">verified</span><h3>Access audit log</h3><p>Every access to a secret is recorded. <em>Tamper-evident HMAC chaining is under audit.</em></p></div>
+      <div class="rec rv"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10M8 3l-2 18M18 3l-2 18"/></svg></div><span class="tag tag-wip">under audit</span><h3>Output sanitization</h3><p>Filters the value and its encoded variants from returned output. Implemented; effectiveness being independently verified.</p></div>
+      <div class="rec rv d1"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg></div><span class="tag tag-wip">under audit</span><h3>Canary secrets</h3><p>Decoy credentials meant to flag exfiltration attempts. Implemented; not yet proven effective.</p></div>
+      <div class="rec rv d2"><div class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><span class="tag tag-wip">planned</span><h3>Hardware backing</h3><p>Planned: Secure Enclave, TPM 2.0, and FIDO2 as an extra layer where available.</p></div>
     </div>
   </div>
 </section>
@@ -401,9 +408,9 @@ Never print my secret values. Docs: https://github.com/r-db/phantom-vault</pre>
 <section class="section close">
   <div class="spectral"></div>
   <div class="container">
-    <span class="eyebrow center" style="display:flex;justify-content:center">Give your AI the keys. Not the ability to keep them.</span>
+    <span class="eyebrow center" style="display:flex;justify-content:center">Secrets by name, not by value</span>
     <h2>Let the assistant work. Keep your secrets <span class="gh">phantom</span>.</h2>
-    <p>Free, open, and auditable. Install it before the next key leaks — not after.</p>
+    <p>Free, open, and auditable — early software (v0.1.0) you can read line by line. We'd rather you trust the code than the copy.</p>
     <div class="install-ctas">
       <a href="#install" class="btn btn-primary">Install free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
       <a href="https://github.com/r-db/phantom-vault" target="_blank" rel="noopener" class="btn btn-ghost">github.com/r-db/phantom-vault</a>
@@ -459,9 +466,9 @@ const lines=[
   {t:'<span class="prm">agent$</span> <span class="cmd">phantom-vault run -- deploy --key $STRIPE_KEY</span>'},
   {t:'<span class="cmt"># the real key is injected into the subprocess…</span>'},
   {t:'  STRIPE_KEY = <span class="secret" id="sec">sk_live_a4f9K2p7Qx8LmZ3rT6bV1nH</span>',reveal:true},
-  {t:'<span class="cmt"># …then ghosted before the AI ever sees a byte</span>',ghost:true},
-  {t:'  <span class="ok">✓</span> deploy complete · key never printed to output'},
-  {t:'  <span class="ok">✓</span> access signed to audit log · canaries quiet'},
+  {t:'<span class="cmt"># …and returned as [REDACTED] in the command output</span>',ghost:true},
+  {t:'  <span class="ok">✓</span> deploy complete · value shown as [REDACTED]'},
+  {t:'  <span class="ok">✓</span> access recorded in the audit log'},
   {t:'<span class="prm">agent$</span> <span class="cursor"></span>'}
 ];
 function type(){
