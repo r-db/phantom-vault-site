@@ -136,6 +136,32 @@
     ul, ol { margin: 16px 0; padding-left: 24px; }
     li { margin-bottom: 8px; }
     hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+    .table-wrap { overflow-x: auto; margin: 16px 0 24px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--text-dim); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    td:first-child { white-space: nowrap; }
+    table code {
+      background: var(--code-bg);
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: var(--green);
+      white-space: nowrap;
+    }
+    .cmd-group-label {
+      display: inline-block;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-left: 8px;
+      vertical-align: middle;
+      font-weight: 600;
+    }
+    .cmd-group-label.safe { color: var(--green); background: rgba(166, 227, 161, 0.12); }
+    .cmd-group-label.human { color: var(--yellow); background: rgba(249, 226, 175, 0.12); }
+    .cmd-group-label.mgmt { color: var(--blue); background: rgba(137, 180, 250, 0.12); }
     .footer {
       border-top: 1px solid var(--border);
       padding-top: 24px;
@@ -162,6 +188,7 @@
     <div class="toc">
       <h3>Contents</h3>
       <ul>
+        <li><a href="#commands"><strong>★ Command Reference</strong></a></li>
         <li><a href="#installation">1. Installation</a></li>
         <li><a href="#first-5-minutes">2. Your First 5 Minutes</a></li>
         <li><a href="#adding-secrets">3. Adding Secrets</a></li>
@@ -177,6 +204,81 @@
         <li><a href="#cheatsheet">13. Cheat Sheet</a></li>
       </ul>
     </div>
+
+    <h2 id="commands">Command Reference</h2>
+    <p>Every command in Phantom Vault <strong>0.1.0</strong>. Run <code>phantom &lt;command&gt; --help</code> for the full options on any of them, or <code>phantom help</code> for the top-level list.</p>
+
+    <div class="callout warn">
+      <p><strong>Two kinds of command.</strong> Most commands never reveal a secret's value, so they're safe for an AI agent to call. A few — <code>get</code> and <code>edit</code> — expose plaintext, so they're gated to a real interactive terminal (TTY). A scripted or agent-driven <code>phantom get</code> is <strong>refused</strong>.</p>
+    </div>
+
+    <h3>Agent-safe <span class="cmd-group-label safe">never reveals a value</span></h3>
+    <p>Safe for an AI agent (or any script) to call — none of these hand back a secret's plaintext.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Command</th><th>What it does</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><code>add</code></td><td>Add a secret. The value is entered hidden, or pulled from an existing environment variable.</td><td><code>phantom add API_KEY</code><br><code>phantom add DB_URL --from-env MY_VAR</code></td></tr>
+          <tr><td><code>list</code></td><td>List all secret names. Never shows values.</td><td><code>phantom list</code></td></tr>
+          <tr><td><code>show</code></td><td>Show a masked secret — the last 4 characters only.</td><td><code>phantom show API_KEY --masked</code></td></tr>
+          <tr><td><code>run</code></td><td>Run a command with secrets injected as environment variables for that one process.</td><td><code>phantom run -s API_KEY -- curl https://api.example.com</code></td></tr>
+          <tr><td><code>rotate</code></td><td>Rotate a secret — replace its value with a new one (prompted, hidden).</td><td><code>phantom rotate API_KEY</code></td></tr>
+          <tr><td><code>import</code></td><td>Import secrets from a <code>.env</code> file.</td><td><code>phantom import .env</code></td></tr>
+          <tr><td><code>canary</code></td><td>Manage canary (honeypot) secrets — <code>create</code>, <code>list</code>, <code>delete</code>.</td><td><code>phantom canary create BACKUP_AWS_KEY --pattern aws-access-key</code></td></tr>
+          <tr><td><code>audit</code></td><td>View the audit log (defaults to the last 20 entries).</td><td><code>phantom audit --last 20</code></td></tr>
+          <tr><td><code>health</code></td><td>Check vault health status.</td><td><code>phantom health</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Human-only <span class="cmd-group-label human">reveals / allows plaintext — needs a TTY</span></h3>
+    <p>These expose secret material or require a person at the keyboard. They need an interactive terminal and are never available to an AI agent.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Command</th><th>What it does</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><code>get</code></td><td>Print a secret's full value. Requires authentication and a real terminal — a piped/scripted/agent call is refused.</td><td><code>phantom get API_KEY</code></td></tr>
+          <tr><td><code>edit</code></td><td>Open the whole vault in <code>$EDITOR</code> as an encrypted notepad (see below). Exposes every value in plaintext, so it's human-only.</td><td><code>phantom edit</code></td></tr>
+          <tr><td><code>passwd</code></td><td>Change the master password. Re-encrypts the entire vault with the new key.</td><td><code>phantom passwd</code></td></tr>
+          <tr><td><code>init</code></td><td>Initialize a new vault. Add <code>--biometric</code> for Touch ID unlock on macOS.</td><td><code>phantom init</code><br><code>phantom init --biometric</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Setup &amp; management <span class="cmd-group-label mgmt">configuration</span></h3>
+    <p>Administrative commands. They don't reveal values, but they change how the vault behaves.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Command</th><th>What it does</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><code>biometric</code></td><td>Manage biometric (Touch ID) unlock — <code>status</code>, <code>enable</code>, <code>disable</code>.</td><td><code>phantom biometric enable</code></td></tr>
+          <tr><td><code>namespace</code></td><td>Manage namespaces for secret isolation — <code>list</code>, <code>create</code>, <code>use</code>, <code>delete</code>.</td><td><code>phantom namespace use work</code></td></tr>
+          <tr><td><code>remove</code></td><td>Remove a secret from the vault.</td><td><code>phantom remove API_KEY</code></td></tr>
+          <tr><td><code>policy</code></td><td>Manage security policies — <code>show</code>, <code>set</code>, <code>reset</code>.</td><td><code>phantom policy show</code></td></tr>
+          <tr><td><code>guardrail</code></td><td>Set monthly spending caps on credentials — <code>set</code>, <code>list</code>, <code>remove</code>, <code>status</code>.</td><td><code>phantom guardrail set openai-key --cap 50 --provider openai</code></td></tr>
+          <tr><td><code>mcp</code></td><td>Manage the MCP server for Claude Code — <code>install</code>, <code>uninstall</code>, <code>status</code>.</td><td><code>phantom mcp install</code></td></tr>
+          <tr><td><code>update</code></td><td>Update phantom to the latest version from GitHub releases.</td><td><code>phantom update</code></td></tr>
+          <tr><td><code>help</code></td><td>Print help for phantom, or for any single command.</td><td><code>phantom help</code><br><code>phantom add --help</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="edit">phantom edit — the encrypted notepad</h3>
+    <p><code>phantom edit</code> opens your <strong>entire vault</strong> in <code>$EDITOR</code> as a plain <code>KEY=VALUE</code> list — one secret per line — so you can add, change, or delete many secrets in a single pass. When you save and close the editor, Phantom re-encrypts the whole vault. Remove a line to delete that secret; lines starting with <code>#</code> are comments.</p>
+    <pre><span class="prompt">~ %</span> <span class="cmd">phantom edit</span>
+<span class="comment"># opens $EDITOR with every secret in KEY=VALUE form:</span>
+<span class="output">OPENAI_API_KEY=sk-...
+STRIPE_SECRET_KEY=sk_live_...
+DATABASE_URL=postgres://...</span>
+<span class="comment"># edit a line to update it, delete a line to remove that secret,
+# add a line to create one, then save to re-encrypt the vault.</span>
+
+<span class="prompt">~ %</span> <span class="cmd">EDITOR=nano phantom edit</span>   <span class="comment"># use a specific editor</span></pre>
+    <div class="callout warn">
+      <p><strong>Human-only.</strong> Because it lays every secret out in plaintext inside your editor, <code>phantom edit</code> requires an interactive terminal and is never exposed to an AI agent — same guarantee as <code>phantom get</code>.</p>
+    </div>
+
+    <hr>
 
     <h2 id="installation">1. Installation</h2>
 
@@ -529,9 +631,18 @@ Security policy reset to defaults.</span></pre>
 <span class="cmd">phantom policy set FILE</span>         <span class="comment"># Apply policy from file</span>
 <span class="cmd">phantom policy reset</span>            <span class="comment"># Reset to defaults</span>
 
+<span class="comment"># Bulk edit (human-only, opens $EDITOR)</span>
+<span class="cmd">phantom edit</span>                    <span class="comment"># Edit whole vault as KEY=VALUE, re-encrypt on save</span>
+
+<span class="comment"># Spending caps</span>
+<span class="cmd">phantom guardrail set NAME --cap 50 --provider openai</span>  <span class="comment"># Cap monthly spend</span>
+<span class="cmd">phantom guardrail status</span>        <span class="comment"># Usage vs cap for every guardrail</span>
+
 <span class="comment"># Maintenance</span>
 <span class="cmd">phantom health</span>                  <span class="comment"># Check vault health</span>
-<span class="cmd">phantom audit --last N</span>          <span class="comment"># View last N audit entries</span></pre>
+<span class="cmd">phantom audit --last N</span>          <span class="comment"># View last N audit entries</span>
+<span class="cmd">phantom passwd</span>                  <span class="comment"># Change master password (re-encrypts vault)</span>
+<span class="cmd">phantom update</span>                  <span class="comment"># Update phantom to latest version</span></pre>
 
     <div class="footer">
       <a href="/">← Back to Home</a>

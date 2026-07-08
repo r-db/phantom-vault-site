@@ -22,6 +22,8 @@ If you use an AI coding assistant (Claude Code, Cursor, Windsurf) and you have A
 
 ## Table of Contents
 
+**[★ Command Reference](#command-reference)** — every command, grouped by who can safely run it
+
 1. [Installation](#1-installation)
 2. [Your First 5 Minutes](#2-your-first-5-minutes)
 3. [Adding Secrets](#3-adding-secrets)
@@ -40,6 +42,76 @@ If you use an AI coding assistant (Claude Code, Cursor, Windsurf) and you have A
 16. [Complete Command Cheat Sheet](#16-complete-command-cheat-sheet)
 17. [What Your AI Agent Sees (MCP Tools)](#17-what-your-ai-agent-sees-mcp-tools)
 18. [Security Model (Plain English)](#18-security-model-plain-english)
+
+---
+
+## Command Reference
+
+Every command in Phantom Vault **0.1.0**. Run `phantom <command> --help` for the full options on any of them, or `phantom help` for the top-level list.
+
+> **Two kinds of command.** Most commands never reveal a secret's value, so they're safe for an AI agent to call. A few — `get` and `edit` — expose plaintext, so they're gated to a real interactive terminal (TTY). A scripted or agent-driven `phantom get` is **refused**.
+
+### Agent-safe — never reveals a value
+
+Safe for an AI agent (or any script) to call — none of these hand back a secret's plaintext.
+
+| Command | What it does | Example |
+|---------|--------------|---------|
+| `add` | Add a secret. The value is entered hidden, or pulled from an existing environment variable. | `phantom add API_KEY`<br>`phantom add DB_URL --from-env MY_VAR` |
+| `list` | List all secret names. Never shows values. | `phantom list` |
+| `show` | Show a masked secret — the last 4 characters only. | `phantom show API_KEY --masked` |
+| `run` | Run a command with secrets injected as environment variables for that one process. | `phantom run -s API_KEY -- curl https://api.example.com` |
+| `rotate` | Rotate a secret — replace its value with a new one (prompted, hidden). | `phantom rotate API_KEY` |
+| `import` | Import secrets from a `.env` file. | `phantom import .env` |
+| `canary` | Manage canary (honeypot) secrets — `create`, `list`, `delete`. | `phantom canary create BACKUP_AWS_KEY --pattern aws-access-key` |
+| `audit` | View the audit log (defaults to the last 20 entries). | `phantom audit --last 20` |
+| `health` | Check vault health status. | `phantom health` |
+
+### Human-only — reveals / allows plaintext (needs a TTY)
+
+These expose secret material or require a person at the keyboard. They need an interactive terminal and are never available to an AI agent.
+
+| Command | What it does | Example |
+|---------|--------------|---------|
+| `get` | Print a secret's full value. Requires authentication and a real terminal — a piped/scripted/agent call is refused. | `phantom get API_KEY` |
+| `edit` | Open the whole vault in `$EDITOR` as an encrypted notepad (see below). Exposes every value in plaintext, so it's human-only. | `phantom edit` |
+| `passwd` | Change the master password. Re-encrypts the entire vault with the new key. | `phantom passwd` |
+| `init` | Initialize a new vault. Add `--biometric` for Touch ID unlock on macOS. | `phantom init`<br>`phantom init --biometric` |
+
+### Setup & management — configuration
+
+Administrative commands. They don't reveal values, but they change how the vault behaves.
+
+| Command | What it does | Example |
+|---------|--------------|---------|
+| `biometric` | Manage biometric (Touch ID) unlock — `status`, `enable`, `disable`. | `phantom biometric enable` |
+| `namespace` | Manage namespaces for secret isolation — `list`, `create`, `use`, `delete`. | `phantom namespace use work` |
+| `remove` | Remove a secret from the vault. | `phantom remove API_KEY` |
+| `policy` | Manage security policies — `show`, `set`, `reset`. | `phantom policy show` |
+| `guardrail` | Set monthly spending caps on credentials — `set`, `list`, `remove`, `status`. | `phantom guardrail set openai-key --cap 50 --provider openai` |
+| `mcp` | Manage the MCP server for Claude Code — `install`, `uninstall`, `status`. | `phantom mcp install` |
+| `update` | Update phantom to the latest version from GitHub releases. | `phantom update` |
+| `help` | Print help for phantom, or for any single command. | `phantom help`<br>`phantom add --help` |
+
+### `phantom edit` — the encrypted notepad
+
+`phantom edit` opens your **entire vault** in `$EDITOR` as a plain `KEY=VALUE` list — one secret per line — so you can add, change, or delete many secrets in a single pass. When you save and close the editor, Phantom re-encrypts the whole vault. Remove a line to delete that secret; lines starting with `#` are comments.
+
+```
+ryan@macbook ~ % phantom edit
+
+  # opens $EDITOR with every secret in KEY=VALUE form:
+  OPENAI_API_KEY=sk-...
+  STRIPE_SECRET_KEY=sk_live_...
+  DATABASE_URL=postgres://...
+
+  # edit a line to update it, delete a line to remove that secret,
+  # add a line to create one, then save to re-encrypt the vault.
+
+ryan@macbook ~ % EDITOR=nano phantom edit    # use a specific editor
+```
+
+> **Human-only.** Because it lays every secret out in plaintext inside your editor, `phantom edit` requires an interactive terminal and is never exposed to an AI agent — the same guarantee as `phantom get`.
 
 ---
 
