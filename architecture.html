@@ -198,7 +198,11 @@
 
   <div class="container">
     <h1>System <span>Architecture</span></h1>
-    <p class="subtitle">Next-Generation LLM-Safe Secret Management</p>
+    <p class="subtitle">The design and threat model for Phantom Vault 0.1.0 (early software).</p>
+
+    <div class="callout info">
+      <p><strong>Read this as a design document, not a feature list.</strong> Phantom Vault is version <strong>0.1.0</strong> — early, open-source software under an independent containment audit (Magnus). The "blind spots" and the layered architecture below describe the <strong>target design</strong>: how the system is meant to defend against an AI agent you've trusted with your machine. What is actually <strong>implemented and verified today</strong> versus <strong>designed / planned / under audit</strong> is spelled out in <a href="#roadmap">Release Status</a>. Where a defense below is not yet verified, treat it as an intention, not a guarantee. For a security tool we would rather understate than overstate.</p>
+    </div>
 
     <div class="toc">
       <h3>Contents</h3>
@@ -213,7 +217,7 @@
     </div>
 
     <h2 id="blind-spots">1. The 14 Blind Spots</h2>
-    <p>Existing secret managers have critical gaps that motivated attackers or clever LLMs can exploit. These are patterns humans miss because they think about secrets the way humans use them, not the way machines exploit them.</p>
+    <p>These are the threat-model gaps that motivated Phantom Vault — patterns a motivated attacker or a clever LLM can exploit. Each "fix" below is the <strong>design response</strong> we are building toward; it is not a claim that the fix is shipped and verified. See <a href="#roadmap">Release Status</a> for what is actually implemented in 0.1.0.</p>
 
     <div class="blind-spot">
       <h4>1. The Master Password Paradox</h4>
@@ -308,6 +312,7 @@
     <hr>
 
     <h2 id="architecture">2. 5-Layer Architecture</h2>
+    <p>This is the <strong>target</strong> layered design. In 0.1.0, Layer 1 (encryption at rest — AES-256-GCM + Argon2id, <code>mlock</code>, zeroize) is implemented and verified, and Layer 2's Landlock filesystem sandbox on <code>phantom run</code> is verified. The hardware root of trust (Layer 0), network-egress filtering, multi-encoding output sanitization (Layer 3), and the tamper-evident audit / dead-man's-switch pieces (Layer 4) are <strong>designed / planned / under audit</strong>, not yet independently verified.</p>
 
     <div class="arch-diagram"><pre>
 +-------------------------------------------------------------------------+
@@ -422,18 +427,15 @@
     <p><strong>You cannot call what does not exist.</strong></p>
 
     <h3>Human-Only Operations</h3>
-    <p>These require biometric confirmation + direct TTY (not piped through MCP):</p>
+    <p>Retrieving a raw plaintext value is gated to a direct terminal — it is never reachable through the MCP server:</p>
     <ul>
-      <li><code>phantom get KEY</code> — retrieve plaintext</li>
-      <li><code>phantom export</code> — bulk export</li>
-      <li><code>phantom backup</code> — create backup</li>
-      <li><code>phantom rotate --force</code> — forced rotation</li>
+      <li><code>phantom get KEY</code> — retrieve plaintext. <strong>Verified:</strong> it refuses to run when stdout is not a TTY (i.e. when a script or an AI pipes it), so the plaintext can't be captured programmatically.</li>
     </ul>
 
     <hr>
 
-    <h2 id="command-analysis">5. Command Pre-Analysis</h2>
-    <p>Before any <code>vault_run</code> executes, a static analyzer blocks oracle attacks.</p>
+    <h2 id="command-analysis">5. Command Pre-Analysis <span style="color: var(--yellow); font-size: 0.8rem;">(designed / under audit)</span></h2>
+    <p>This is the <strong>designed</strong> behavior of the command analyzer: before a <code>vault_run</code> command executes, a static analyzer is meant to block oracle-style extraction attacks. It exists in the codebase but is <strong>not yet independently verified</strong> — treat the block-lists below as the intended policy, not a proven guarantee.</p>
 
     <h3>Blocked Patterns</h3>
     <pre><span style="color: var(--yellow);">CATEGORY: Substring Extraction</span>
@@ -471,19 +473,24 @@
     <hr>
 
     <h2 id="roadmap">6. Release Status</h2>
+    <p>Phantom Vault is at <strong>0.1.0</strong> — early software. There is no 1.x release. The table below is the honest split between what is verified in the code today and what is designed but still under audit.</p>
     <table>
-      <tr><th>Version</th><th>Scope</th><th>Status</th></tr>
-      <tr><td>1.0.0</td><td>Core crypto (AES-256-GCM, Argon2id) + CLI + MCP server</td><td style="color: var(--green);">✓ Released</td></tr>
-      <tr><td>1.0.0</td><td>Biometric auth (Touch ID on macOS via Keychain)</td><td style="color: var(--green);">✓ Released</td></tr>
-      <tr><td>1.0.0</td><td>Multi-encoding sanitizer (44+ credential patterns)</td><td style="color: var(--green);">✓ Released</td></tr>
-      <tr><td>1.0.0</td><td>Secret rotation + expiration + import from .env</td><td style="color: var(--green);">✓ Released</td></tr>
-      <tr><td>1.1.0</td><td>Namespace isolation + canary secrets</td><td style="color: var(--green);">✓ Released</td></tr>
-      <tr><td>1.1.0</td><td>Audit log viewer + security policies</td><td style="color: var(--green);">✓ Released</td></tr>
-      <tr><td>1.2.0</td><td>Secure Enclave key storage (hardware-bound keys)</td><td>Planned</td></tr>
-      <tr><td>1.3.0</td><td>Process sandboxing + network filtering</td><td>Planned</td></tr>
-      <tr><td>1.4.0</td><td>Lineage tracking (HUMAN_DIRECT / LLM_APPROVED)</td><td>Planned</td></tr>
-      <tr><td>1.5.0</td><td>Desktop UI (Tauri + Flutter)</td><td>Planned</td></tr>
-      <tr><td>2.0.0</td><td>Team collaboration + enterprise features</td><td>Planned</td></tr>
+      <tr><th>Area</th><th>Detail</th><th>Status (0.1.0)</th></tr>
+      <tr><td>Encryption at rest</td><td>AES-256-GCM with an Argon2id-derived master key</td><td style="color: var(--green);">✓ Verified</td></tr>
+      <tr><td>Memory protection</td><td><code>mlock</code> pinning + zeroize on drop</td><td style="color: var(--green);">✓ Verified</td></tr>
+      <tr><td>Anti-exfil read guard</td><td><code>phantom get</code> refuses non-TTY (scripted) reads</td><td style="color: var(--green);">✓ Verified</td></tr>
+      <tr><td>Filesystem sandbox</td><td>Landlock sandbox on <code>phantom run</code> — proven file-sink/exfil block</td><td style="color: var(--green);">✓ Verified</td></tr>
+      <tr><td>Canary secrets + audit log</td><td>Decoy secrets that flag on access; every access logged</td><td style="color: var(--green);">✓ Verified</td></tr>
+      <tr><td>CLI + MCP server</td><td><code>phantom</code> CLI and <code>vault-mcp</code> (6 leak-resistant tools)</td><td style="color: var(--green);">✓ Verified</td></tr>
+      <tr><td>Biometric unlock</td><td>Touch ID on macOS via Keychain</td><td style="color: var(--green);">✓ Verified (macOS)</td></tr>
+      <tr><td>Output sanitizer</td><td>Strip secret + encoded variants from returned output</td><td style="color: var(--yellow);">Designed · under audit</td></tr>
+      <tr><td>Network-egress jail</td><td>Fail-closed per-command network filtering</td><td style="color: var(--yellow);">Designed · under audit</td></tr>
+      <tr><td>Command pre-analysis</td><td>Static analyzer blocking oracle-extraction patterns</td><td style="color: var(--yellow);">Designed · under audit</td></tr>
+      <tr><td>Tamper-evident audit chain</td><td>HMAC-chained append-only log + lineage tagging</td><td style="color: var(--yellow);">Designed · under audit</td></tr>
+      <tr><td>Decoy honeypot vault</td><td>Full decoy-vault deception layer</td><td style="color: var(--yellow);">Designed, not fully wired</td></tr>
+      <tr><td>Hardware root of trust</td><td>Secure Enclave / TPM 2.0 / FIDO2 key backing</td><td style="color: var(--text-dim);">Planned</td></tr>
+      <tr><td>End-to-end containment</td><td>"An AI can never exfiltrate a secret"</td><td style="color: var(--text-dim);">Goal — under Magnus gate, not claimed until it passes</td></tr>
+      <tr><td>Desktop UI</td><td>Tauri + Flutter app</td><td style="color: var(--text-dim);">Planned</td></tr>
     </table>
 
     <div class="footer">

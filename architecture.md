@@ -1,8 +1,12 @@
-# VAULT V2: Next-Generation LLM-Safe Secret Management
+# Phantom Vault — Architecture & Threat Model
 
-**Date:** February 26, 2026
-**Status:** Open Source Architecture Specification
+**Version:** 0.1.0 (early software)
+**Status:** Open-source design document — under independent containment audit (Magnus)
 **Codename:** Phantom Vault (secrets exist but are never observable)
+
+---
+
+> **Read this as a design document, not a feature list.** This describes the *target* architecture and the threat model behind it. What is actually implemented and verified in 0.1.0 — encryption at rest (AES-256-GCM + Argon2id), `mlock` memory, the `phantom get` non-TTY read guard, the Landlock filesystem sandbox on `phantom run`, canary secrets, and the audit log — is a subset of what's below. Layers such as the hardware root of trust, network-egress filtering, multi-encoding output sanitization, command pre-analysis, and the tamper-evident audit chain are **designed / planned / under audit**, not yet independently verified. Where a defense below is described as if built, treat it as design intent until the audit confirms it.
 
 ---
 
@@ -816,6 +820,8 @@ Apache 2.0 (same as secretctl, compatible with commercial use)
 "The API key vault where secrets are used but never seen. Built for the age of AI agents."
 
 ### First Release Milestones
+
+_Note: this is the original planning roadmap. The shipped 0.1.0 already includes several items originally slated for later milestones (the MCP server, the Landlock filesystem sandbox, canary secrets, and the audit log are in 0.1.0). For the honest, current verified-vs-planned split, see the Release Status section of the architecture page. There is no 1.0.0 release yet._
 
 | Version | Scope |
 |---------|-------|

@@ -4,7 +4,11 @@
 
 > The API key vault where secrets are used but never seen. Built for the age of AI agents.
 
-**Version 1.0 — February 2026**
+**Version 0.1.0 — early software**
+
+---
+
+> **Honest status (read first).** Phantom Vault is early (0.1.0) and under an independent containment audit (Magnus). **Verified today:** encryption at rest (AES-256-GCM + Argon2id), `mlock` memory, the `phantom get` non-TTY read guard, the Landlock filesystem sandbox on `phantom run`, canary secrets, and the audit log. **Designed but not yet independently verified (treat as planned):** output sanitization, the network-egress jail, command pre-analysis, the tamper-evident HMAC-chained audit, and any hardware backing. Some example outputs in this manual show that designed behavior — where they do, it is the intended result under audit, not a proven guarantee. The top-line promise that "an AI can never exfiltrate a secret" is a goal we are proving, not a finished claim.
 
 ---
 
@@ -61,21 +65,21 @@ That `%` (or `$` on Linux) is called the **prompt**. It means the terminal is re
 Copy this, paste it into your terminal, press Enter:
 
 ```
-ryan@macbook ~ % curl -fsSL https://phantomvault.riscent.com/install | sh
+ryan@macbook ~ % curl -fsSL https://phantomvault.riscent.com/install | bash
 
   ⬇ Phantom Vault Installer
 
   Detecting system...
   ✓ macOS 15.3 (Apple Silicon M4)
 
-  Downloading phantom-vault v1.0.0 for aarch64-apple-darwin...
+  Downloading phantom + vault-mcp (0.1.0) for aarch64-apple-darwin...
   ✓ Downloaded (4.2 MB)
 
   Installing to /usr/local/bin/phantom...
   ✓ Installed
 
   Verifying...
-  ✓ phantom-vault 1.0.0
+  ✓ phantom 0.1.0
 
   🔐 Phantom Vault is ready.
   Run 'phantom init' to create your vault.
@@ -86,14 +90,14 @@ That's it. One command. It detects your operating system, downloads the right ve
 **On Linux it looks like this:**
 
 ```
-ryan@linux ~ $ curl -fsSL https://phantomvault.riscent.com/install | sh
+ryan@linux ~ $ curl -fsSL https://phantomvault.riscent.com/install | bash
 
   ⬇ Phantom Vault Installer
 
   Detecting system...
   ✓ Linux x86_64 (Ubuntu 24.04)
 
-  Downloading phantom-vault v1.0.0 for x86_64-unknown-linux-gnu...
+  Downloading phantom + vault-mcp (0.1.0) for x86_64-unknown-linux-gnu...
   ✓ Downloaded (4.8 MB)
 
   Installing to /usr/local/bin/phantom...
@@ -111,7 +115,7 @@ ryan@linux ~ $ curl -fsSL https://phantomvault.riscent.com/install | sh
 
 ```
 ryan@macbook ~ % phantom --version
-phantom-vault 1.0.0
+phantom 0.1.0
 ```
 
 If you see the version number, you're good. If you see `command not found`, see [Troubleshooting](#15-troubleshooting).
@@ -129,7 +133,7 @@ ryan@macbook ~ % brew install phantomvault/tap/phantom-vault
 
 **Cargo (if you have Rust):**
 ```
-ryan@macbook ~ % cargo install phantom-vault
+ryan@macbook ~ % cargo build --release -p phantom-cli -p vault-mcp
 ```
 
 **Build from source:**
@@ -156,7 +160,7 @@ ryan@macbook ~ % phantom init
   ✓ Apple Secure Enclave detected (M4)
   ✓ Touch ID available
 
-  Creating vault at ~/.phantom/vault.db
+  Creating vault at ~/.phantom-vault
   ✓ Vault created with hardware-backed encryption
   ✓ Config written to ~/.phantom/config.toml
   ✓ Audit log initialized at ~/.phantom/audit.db
@@ -584,7 +588,7 @@ ryan@macbook ~ % phantom mcp status
 
   Configuration:  ✓ Installed in ~/.claude/settings.json
   Server binary:  ✓ /usr/local/bin/phantom
-  Vault:          ✓ ~/.phantom/vault.db (encrypted, 5 secrets)
+  Vault:          ✓ ~/.phantom-vault (encrypted, 5 secrets)
   Last connected: 2026-02-27 16:45:22 UTC
 ```
 
@@ -593,7 +597,7 @@ ryan@macbook ~ % phantom mcp status
 Claude Code starts the MCP server automatically. But if you need to test:
 
 ```
-ryan@macbook ~ % phantom mcp serve
+ryan@macbook ~ % vault-mcp
 
   🔐 Phantom Vault MCP Server
   Transport: stdio (JSON-RPC)
@@ -1495,7 +1499,7 @@ zsh: command not found: phantom
 ```
 ryan@macbook ~ % export PATH="$PATH:/usr/local/bin"
 ryan@macbook ~ % phantom --version
-phantom-vault 1.0.0
+phantom 0.1.0
 ```
 
 To make this permanent, add the export line to your `~/.zshrc` (Mac) or `~/.bashrc` (Linux).

@@ -185,23 +185,27 @@
     <strong>On Linux:</strong> Press <code>Ctrl + Alt + T</code></p>
 
     <h3>Install (One Command)</h3>
-    <pre><span class="prompt">~ %</span> <span class="cmd">curl -fsSL https://phantomvault.riscent.com/install | sh</span>
+    <pre><span class="prompt">~ %</span> <span class="cmd">curl -fsSL https://phantomvault.riscent.com/install | bash</span>
 
 <span class="output">  Detecting system...
-  <span class="success">✓</span> macOS 15.3 (Apple Silicon M4)
+  <span class="success">✓</span> macOS 15.3 (Apple Silicon)
 
-  Downloading phantom-vault v1.0.0...
-  <span class="success">✓</span> Downloaded (4.2 MB)
+  Downloading phantom + vault-mcp (0.1.0)...
+  <span class="success">✓</span> Downloaded
 
-  Installing to /usr/local/bin/phantom...
-  <span class="success">✓</span> Installed
+  Installing to /usr/local/bin ...
+  <span class="success">✓</span> Installed phantom + vault-mcp to /usr/local/bin
 
   <span class="success">🔐 Phantom Vault is ready.</span>
   Run 'phantom init' to create your vault.</span></pre>
 
+    <div class="callout info">
+      <p><strong>What the installer does:</strong> downloads the <code>phantom</code> CLI and the <code>vault-mcp</code> server as real binaries into <code>/usr/local/bin</code>, so <code>phantom</code> works from any directory. Your vault lives at <code>~/.phantom-vault</code> (an absolute path, found no matter where you run from). On a <strong>fresh machine</strong>, <code>phantom init</code> sets up a new vault. On a machine that <strong>already has one</strong>, <code>phantom init</code> reports "Vault already exists" and leaves it untouched — you just unlock it (run <code>phantom</code>). It never silently creates a second vault over an existing one.</p>
+    </div>
+
     <h3>Verify It Worked</h3>
     <pre><span class="prompt">~ %</span> <span class="cmd">phantom --version</span>
-<span class="output">phantom-vault 1.0.0</span></pre>
+<span class="output">phantom 0.1.0</span></pre>
 
     <hr>
 
@@ -210,7 +214,7 @@
     <h3>Step 1: Create Your Vault</h3>
     <pre><span class="prompt">~ %</span> <span class="cmd">phantom init</span>
 
-<span class="output">  Creating new vault at ~/.vault-secrets
+<span class="output">  Creating new vault at ~/.phantom-vault
 
   Enter master password: </span><span class="comment">••••••••••••••••</span>
 <span class="output">  Confirm master password: </span><span class="comment">••••••••••••••••</span>
@@ -225,7 +229,7 @@
     <h3>With Touch ID (macOS)</h3>
     <pre><span class="prompt">~ %</span> <span class="cmd">phantom init --biometric</span>
 
-<span class="output">  Creating new vault at ~/.vault-secrets
+<span class="output">  Creating new vault at ~/.phantom-vault
 
   Enter master password: </span><span class="comment">••••••••••••••••</span>
 <span class="output">  Confirm master password: </span><span class="comment">••••••••••••••••</span>
@@ -320,8 +324,12 @@
 <span class="comment"># Claude runs:</span>
 <span class="cmd">vault_run(keys: ["RAILWAY_TOKEN"], command: "railway up")</span>
 
-<span class="comment"># Output is sanitized — if the token leaked, you'd see:</span>
+<span class="comment"># The output sanitizer is designed to redact a leaked token as:</span>
 <span class="output">Deploying with token [REDACTED:RAILWAY_TOKEN]...</span></pre>
+
+    <div class="callout warn">
+      <p><strong>Honest status:</strong> the output sanitizer and the network-egress jail are in the codebase but <strong>not yet independently verified</strong> — treat them as planned, under audit. What is verified today: encryption at rest (AES-256-GCM + Argon2id), <code>mlock</code> memory, the Landlock filesystem sandbox on <code>phantom run</code>, the <code>phantom get</code> non-TTY read guard, canary secrets, and the audit log.</p>
+    </div>
 
     <hr>
 
@@ -336,7 +344,7 @@
     <pre><span class="prompt">~ %</span> <span class="cmd">phantom run -s DATABASE_URL -s REDIS_URL -- node server.js</span></pre>
 
     <div class="callout">
-      <p><strong>Security:</strong> The secrets only exist in that subprocess. When it exits, they're gone. Output is scanned for leaked secrets and redacted automatically.</p>
+      <p><strong>Security:</strong> The secret only exists in that subprocess. When it exits, it's gone. The subprocess runs under a Landlock filesystem sandbox (verified). Automatic output scanning/redaction is designed but not yet independently verified — treat it as planned.</p>
     </div>
 
     <hr>
@@ -386,7 +394,7 @@
   2026-02-27 12:00:00   vault_opened    -                   cli
 </span></pre>
 
-    <p>Every access is logged with HMAC chaining — tampering is detectable.</p>
+    <p>Every access is written to the audit log. A tamper-evident HMAC-chained log is designed and in the codebase, but not yet independently verified — treat the tamper-evidence as planned.</p>
 
     <hr>
 

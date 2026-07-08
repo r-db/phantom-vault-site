@@ -1,14 +1,31 @@
 # Phantom Vault
 
-> Phantom Vault is a free, open-source secret manager for the age of AI agents. It lets AI coding assistants (like Claude Code) run commands that use your API keys and secrets without ever seeing the secret values: secrets are injected into sandboxed subprocesses, output is sanitized (including encoded variants), exfiltration attempts are caught by canary secrets, and every access is written to an HMAC-chained audit log. AES-256-GCM encryption, memory protected with mlock and zeroization, and hardware security module support (Secure Enclave, TPM 2.0, FIDO2). Ships an MCP server for Claude Code and MCP-compatible assistants. Apache 2.0. A community donation from Riscent.
+> Phantom Vault is a free, open-source secret manager for the age of AI agents. It lets AI coding assistants (like Claude Code) run commands that use your API keys and secrets by name — the value is used, not shown. It ships a global `phantom` CLI and a `vault-mcp` MCP server. Version 0.1.0 — early software under an independent containment audit (Magnus). Apache 2.0. A community donation from Riscent.
+
+## Verified today (0.1.0)
+- Encrypted at rest with AES-256-GCM and an Argon2id-derived master key; keys mlock'd and zeroized in memory
+- `phantom get` refuses non-TTY (scripted) reads — an AI can't pipe the raw value out of the CLI
+- `phantom run` executes the subprocess under a Landlock filesystem sandbox — a proven block on writing the secret to a file
+- Canary honeypot secrets that flag on access, plus an audit log of every access
+- CLI (`phantom`) + MCP server (`vault-mcp`) exposing 6 leak-resistant tools (vault_list, vault_exists, vault_masked, vault_run, vault_health, vault_rotate); there is no vault_get
+
+## Designed / planned / under audit (do not present as shipped guarantees)
+- Output sanitization (stripping the secret and encoded variants from returned output)
+- Network-egress jail (fail-closed per-command network filtering)
+- Command pre-analysis (blocking oracle-extraction patterns)
+- Tamper-evident HMAC-chained audit and lineage tagging
+- Decoy honeypot vault (designed, not fully wired)
+- Hardware backing (Secure Enclave, TPM 2.0, FIDO2)
+- The top-line goal that "an AI can never exfiltrate a secret" — under the Magnus containment gate, not claimed as final until it passes
 
 ## Install
 - curl -fsSL https://phantomvault.riscent.com/install | bash
-- or: cargo install phantom-vault
-- MCP server: phantom-vault mcp serve
+- installs the `phantom` CLI and `vault-mcp` server to /usr/local/bin
+- MCP wiring for Claude Code: phantom mcp install
+- verify: phantom --version   (prints: phantom 0.1.0)
 
 ## Source
-- https://github.com/r-db/phantom-vault (Apache 2.0, v1.8.2)
+- https://github.com/r-db/phantom-vault (Apache 2.0, v0.1.0)
 
 ## Maintainer
 - Riscent, LLC — https://riscent.com
